@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="沙田友">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <title>沙田友 Sha Tin Link · 保良局朱正賢小學呈獻</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg-primary: #1e1e2f;
+      --bg-secondary: #27273f;
+      --bg-card: #2f2f48;
+      --border-color: #3f3f5f;
+      --text-main: #ffffff;
+      --text-sub: #b3b3cc;
+      --accent-orange: #ff6b35;
+      --accent-blue: #5d78ff;
+      --accent-green: #2ecc71;
+      --accent-red: #e74c3c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex; justify-content: center; align-items: center; min-height: 100vh;
+      overflow: hidden;
+    }
+    .app-container {
+      width: 100%; max-width: 480px; background: var(--bg-secondary);
+      position: relative; display: flex; flex-direction: column;
+      height: 100vh; height: 100dvh; overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    @media (min-width: 768px) {
+      .app-container {
+        max-width: 480px; height: 92vh; border-radius: 32px;
+        border: 4px solid var(--border-color);
+      }
+    }
+    .status-bar {
+      background: #1a1a2e; padding: 12px 20px 4px; display: flex;
+      justify-content: space-between; font-size: 13px; font-weight: 600;
+      color: var(--text-sub); border-bottom: 1px solid var(--border-color);
+    }
+    .app-header {
+      background: #1a1a2e; padding: 14px 20px; font-size: 18px; font-weight: 700;
+      color: #ffffff; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .app-header span.logo-highlight { color: var(--accent-orange); }
+    .role-badge {
+      font-size: 11px; padding: 4px 10px; border-radius: 20px;
+      font-weight: 600; text-transform: uppercase;
+    }
+    .role-badge.citizen { background: rgba(255, 107, 53, 0.2); color: var(--accent-orange); }
+    .role-badge.ngo { background: rgba(46, 204, 113, 0.2); color: var(--accent-green); }
+    .screen {
+      flex: 1; overflow-y: auto; padding: 16px; display: none; flex-direction: column; gap: 14px;
+      padding-bottom: 84px;
+    }
+    .screen.active { display: flex; }
+    .bottom-nav {
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 70px;
+      background: #1a1a2e; border-top: 1px solid var(--border-color);
+      display: none; justify-content: space-around; align-items: center;
+      z-index: 40; padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      background: none; border: none; color: var(--text-sub); cursor: pointer;
+      font-size: 11px; font-weight: 600; flex: 1; transition: color 0.2s;
+    }
+    .bottom-nav-item.active { color: var(--accent-orange); }
+    .bottom-nav-item svg { width: 22px; height: 22px; fill: currentColor; }
+    .card {
+      background: var(--bg-card); border-radius: 20px; padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid var(--border-color);
+    }
+    .btn {
+      background: var(--accent-orange); border: none; color: white; font-weight: 700; font-size: 15px;
+      padding: 12px 20px; border-radius: 30px; cursor: pointer; width: 100%;
+      transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn:active { background: #e55a2b; transform: scale(0.98); }
+    .btn-outline { background: transparent; border: 2px solid var(--accent-orange); color: var(--accent-orange); }
+    .btn-blue { background: var(--accent-blue); }
+    .btn-blue:active { background: #405aff; }
+    .btn-green { background: var(--accent-green); }
+    .btn-green:active { background: #27ae60; }
+    .btn-red { background: var(--accent-red); }
+    .btn-red:active { background: #c0392b; }
+    .btn-small { padding: 6px 14px; font-size: 12px; width: auto; border-radius: 20px; }
+    .input-field {
+      width: 100%; padding: 12px 16px; border-radius: 30px; border: 1px solid var(--border-color);
+      font-size: 15px; outline: none; background: var(--bg-primary); color: var(--text-main);
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--accent-orange); }
+    .flex-row { display: flex; align-items: center; gap: 10px; }
+    .badge { background: #3c2a22; color: var(--accent-orange); padding: 4px 12px; border-radius: 30px; font-size: 12px; font-weight: 600; }
+    .npc-badge { background: #1a3a2a; color: #4caf50; font-weight: 600; padding: 4px 10px; border-radius: 30px; font-size: 12px; }
+    .screen-title { font-size: 22px; font-weight: 700; color: #ffffff; }
+    .subtitle { color: var(--text-sub); font-size: 14px; }
+    hr { border: 0.5px solid var(--border-color); margin: 12px 0; }
+    .tab-bar { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+    .tab {
+      padding: 8px 16px; border-radius: 20px; background: var(--bg-card); font-size: 13px;
+      font-weight: 600; cursor: pointer; border: 1px solid var(--border-color); color: var(--text-sub);
+      white-space: nowrap; transition: all 0.2s;
+    }
+    .tab.active { background: var(--accent-orange); color: white; border-color: var(--accent-orange); }
+    .post-card {
+      background: var(--bg-card); border-radius: 16px; padding: 14px; margin-bottom: 10px;
+      border: 1px solid var(--border-color); cursor: pointer;
+    }
+    .anon-name { color: var(--accent-orange); font-weight: 600; font-size: 13px; }
+    #liveMap { height: 260px; width: 100%; border-radius: 20px; margin: 8px 0; border: 2px solid var(--border-color); }
+    .eta-box {
+      background: var(--bg-card); border-radius: 16px; padding: 12px; display: flex;
+      justify-content: space-around; text-align: center; border: 1px solid var(--border-color);
+    }
+    .info-card {
+      display: flex; align-items: center; gap: 12px; background: var(--bg-card);
+      border-radius: 18px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+    .traffic-status { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .traffic-green { background: #2ecc71; }
+    .traffic-yellow { background: #f1c40f; }
+    .traffic-red { background: #e74c3c; }
+    .ai-fab {
+      position: absolute; bottom: 84px; right: 20px; width: 56px; height: 56px;
+      background: linear-gradient(135deg, #7b93f7, #b585e8); border-radius: 50%;
+      box-shadow: 0 6px 20px rgba(123, 147, 247, 0.4); display: flex;
+      align-items: center; justify-content: center; font-size: 28px;
+      cursor: pointer; z-index: 45; border: none; color: white;
+      transition: transform 0.2s;
+    }
+    .ai-fab:active { transform: scale(0.95); }
+    .ai-chat-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); z-index: 50; display: none; flex-direction: column;
+      justify-content: flex-end;
+    }
+    .ai-chat-overlay.active { display: flex; }
+    .ai-chat-panel {
+      background: var(--bg-secondary); border-radius: 24px 24px 0 0; padding: 20px; width: 100%;
+      max-height: 80%; display: flex; flex-direction: column; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    }
+    .ai-chat-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; font-weight: 700; color: #ffffff;
+    }
+    .ai-chat-messages {
+      flex: 1; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
+      padding-right: 4px;
+    }
+    .ai-msg {
+      max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px;
+      line-height: 1.4; word-wrap: break-word;
+    }
+    .ai-msg.user { align-self: flex-end; background: var(--accent-orange); color: white; border-bottom-right-radius: 4px; }
+    .ai-msg.bot { align-self: flex-start; background: var(--bg-card); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+    .ai-chat-input-area { display: flex; gap: 8px; align-items: center; }
+    .ai-chat-input {
+      flex: 1; border-radius: 30px; border: 1px solid var(--border-color); padding: 12px 16px;
+      font-size: 14px; outline: none; background: var(--bg-primary); color: var(--text-main);
+    }
+    .mic-btn {
+      background: #4a4a6a; border: none; color: white; border-radius: 50%; width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;
+    }
+    .mic-btn.recording { background: var(--accent-red); animation: pulse 1.2s 3; }
+    .mic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .toggle-switch {
+      width: 50px; height: 28px; background: #5a5a70; border-radius: 30px;
+      position: relative; cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-switch.active { background: var(--accent-orange); }
+    .toggle-switch::after {
+      content: ''; width: 24px; height: 24px; background: white; border-radius: 50%;
+      position: absolute; top: 2px; left: 2px; transition: transform 0.2s;
+    }
+    .toggle-switch.active::after { transform: translateX(22px); }
+    .ngo-card {
+      background: var(--bg-card); border-radius: 16px; padding: 12px; margin-bottom: 8px;
+      cursor: pointer; border: 1px solid var(--border-color); transition: background 0.2s;
+    }
+    .ngo-card:hover { background: #353550; }
+    .activity-card {
+      background: var(--bg-card); border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border-color); margin-bottom: 12px;
+    }
+    .activity-cover {
+      height: 90px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white;
+    }
+    .activity-info { padding: 12px; }
+    .data-panel {
+      background: var(--bg-card); border-radius: 16px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color);
+    }
+    .status-alert {
+      background: #3e2723; border: 1px solid #ff8f00; border-radius: 16px; padding: 12px;
+      color: #ffd54f; font-size: 13px; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px;
+    }
+    .loader {
+      display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-more {
+      background: #444; color: white; border: none; border-radius: 20px; padding: 8px 16px;
+      font-size: 13px; cursor: pointer; width: 100%; margin-top: 10px;
+    }
+    .load-more:disabled { opacity: 0.5; }
+    .toast-container {
+      position: fixed; bottom: 90px; left: 16px; right: 16px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 9999; pointer-events: none;
+    }
+    .toast {
+      padding: 14px 20px; border-radius: 16px; font-weight: 700; font-size: 14px;
+      text-align: center; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+      pointer-events: auto;
+    }
+    .toast.success { background: #2ecc71; }
+    .toast.error { background: #e74c3c; }
+    .toast.info { background: var(--accent-blue); }
+    @keyframes toastIn  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes toastOut { to { opacity:0; transform:translateY(-20px); } }
+    .global-logout-btn {
+      background: var(--accent-red); border: none; color: white; border-radius: 20px;
+      padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="app-container" id="appContainer">
+  <div class="status-bar" id="modeStatus">📱 沙田友 Sha Tin Link</div>
+  <div class="app-header">
+    <div class="flex-row">
+      <span style="font-size:20px;">🌉</span>
+      <strong style="font-size: 16px;">城門河畔 · <span class="logo-highlight">沙田友</span></strong>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span id="roleBadgeContainer"></span>
+      <button id="globalLogoutBtn" class="global-logout-btn" onclick="logoutUser()" style="display:none;">🚪 登出</button>
+    </div>
+  </div>
+
+  <!-- 登入畫面 -->
+  <div id="screenLogin" class="screen active">
+    <div style="text-align:center; margin:20px 0;">
+      <h2>凝聚沙田互助力量</h2>
+      <p style="color:var(--text-sub);">用人工智能連結街坊與義工</p>
+    </div>
+    <button class="btn btn-blue" onclick="smartLogin()">🔐 「智方便」極速登入</button>
+    <div class="login-divider" style="text-align:center; margin:10px 0; color:var(--text-sub); font-size:12px;">─── 手機號碼登入 ───</div>
+    <input class="input-field" type="tel" placeholder="手機號碼" value="98765432" id="phoneInput">
+    <input class="input-field" type="password" placeholder="密碼 (測試Demo: 123456)" value="123456" id="passwordInput">
+    <button class="btn" onclick="phoneLogin()">📱 市民登入</button>
+    <div class="login-divider" style="text-align:center; margin:10px 0; color:var(--text-sub); font-size:12px;">─── 沒有帳戶？ ───</div>
+    <button class="btn btn-outline" onclick="showScreen('screenRegister')">📝 立即註冊新帳戶</button>
+    <div class="login-divider" style="text-align:center; margin:10px 0; color:var(--text-sub); font-size:12px;">─── 組織機構入口 ───</div>
+    <button class="btn btn-green" onclick="showScreen('screenNgoLogin')">🏢 NGO 組織後台登入</button>
+  </div>
+
+  <!-- 註冊畫面 -->
+  <div id="screenRegister" class="screen">
+    <div class="screen-title">📝 建立新帳戶</div>
+    <p class="subtitle">填寫基本資料即可成為沙田友市民</p>
+    <input class="input-field" type="text" placeholder="真實姓名 / 稱呼" id="regName">
+    <input class="input-field" type="tel" placeholder="聯絡電話" id="regPhone">
+    <input class="input-field" type="password" placeholder="設定密碼" id="regPassword">
+    <button class="btn" onclick="registerAccount()">🚀 完成註冊</button>
+    <button class="btn btn-outline" onclick="showScreen('screenLogin')">返回登入</button>
+  </div>
+
+  <!-- NGO 登入 -->
+  <div id="screenNgoLogin" class="screen">
+    <div style="text-align:center; margin:30px 0;"><h2>🏢 NGO 組織後台登入</h2></div>
+    <input class="input-field" type="text" placeholder="組織帳號" value="ngo_shatin" id="ngoAccount">
+    <input class="input-field" type="password" placeholder="密碼" value="demo1234" id="ngoPassword">
+    <button class="btn btn-green" onclick="ngoLogin()">登入 NGO 管理後台</button>
+    <button class="btn btn-outline" onclick="showScreen('screenLogin')">← 返回登入畫面</button>
+  </div>
+
+  <!-- 主頁面 (市民) -->
+  <div id="screenTaskList" class="screen">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span id="currentUserName">載入中...</span>
+    </div>
+    <div id="volunteerStatusSection" style="display:none;">
+      <div class="card flex-row" style="justify-content:space-between; padding:12px 16px;">
+        <div><strong>🤝 街坊互助模式</strong><p style="font-size:12px;color:var(--text-sub);">開啟後可接收附近街坊的即時求助</p></div>
+        <div class="toggle-switch" id="onlineToggle" onclick="toggleOnline()"></div>
+      </div>
+      <div class="subtitle" id="onlineStatusText" style="margin-top:-6px; font-size:12px; font-weight:600;">你目前處於離線狀態</div>
+    </div>
+    <div id="kycAwaitingAlert" class="status-alert" style="display:none;"><span>⚠️</span><div><strong>等待 NGO 認證中</strong><p style="font-size:12px; margin-top:2px;">為確保社區長者安全，您的義工身份正在進行 KYC 審核。核准後方可接單。</p></div></div>
+    
+    <!-- 🎤 語音一鍵求助 (長者友善大掣) -->
+    <button class="card" id="voiceHelpBtn" onclick="startVoiceHelp()" style="cursor:pointer;text-align:center;padding:16px;background:linear-gradient(135deg,#ff6b35,#e74c3c);border:none;">
+      <div style="font-size:32px;margin-bottom:4px;">🎤</div>
+      <div style="font-weight:700;font-size:15px;">語音求助 · 㩒住講</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px;" id="voiceHelpHint">輕觸開始 → 講低你需要咩幫助</div>
+    </button>
+    <div class="info-card" id="weatherCard" onclick="showWeatherDetail()">
+      <div style="font-size:28px;">⛅</div>
+      <div>
+        <strong>沙田區 即時天氣</strong>
+        <div style="font-size:13px; color:var(--text-sub);"><span class="loader"></span>載入中...</div>
+        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">資料來源：香港天文台</div>
+      </div>
+    </div>
+
+    <div class="info-card" id="trafficCard" onclick="showTrafficDetail()">
+      <div style="font-size:24px;">🚦</div>
+      <div style="flex:1;">
+        <strong>城門河畔即時交通</strong>
+        <div style="font-size:12px; color:var(--text-sub); margin-top:2px; display:flex; gap:8px;">
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
+        </div>
+        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">基於時段估算</div>
+      </div>
+    </div>
+
+    <div id="liveRequestContainer"></div>
+    <div class="subtitle" style="color:#ffffff; font-weight:700;">🏢 合作 NGO 機構</div>
+    <div id="ngoListContainer"></div>
+    <div class="subtitle" style="color:#ffffff; font-weight:700;">📌 預約義工活動</div>
+    <div id="taskListContainer"></div>
+  </div>
+
+  <!-- 天氣詳情 -->
+  <div id="screenWeatherDetail" class="screen">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button onclick="showScreen('screenTaskList')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回</button>
+      <span style="font-weight:700;">🌤️ 沙田逐小時天氣</span>
+    </div>
+    <div class="card" id="weatherDetailCard">
+      <div id="weatherDetailSummary" style="display:flex;justify-content:space-between;">
+        <div><strong>載入中...</strong></div>
+        <div style="color:var(--accent-orange);">--</div>
+      </div>
+      <div id="weatherDetailContent" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+        <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:12px;">
+          <div class="loader"></div><span>從香港天文台獲取數據...</span>
+        </div>
+      </div>
+      <hr>
+      <div style="font-size:11px;color:var(--text-sub);text-align:center;">資料來源：香港天文台開放數據</div>
+    </div>
+  </div>
+
+  <!-- 交通詳情 -->
+  <div id="screenTrafficDetail" class="screen">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button onclick="showScreen('screenTaskList')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回</button>
+      <span style="font-weight:700;">🚦 沙田主要道路即時狀態</span>
+    </div>
+    <div class="card" id="trafficDetailCard">
+      <div id="trafficDetailContent">
+        <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:12px;">
+          <div class="loader"></div><span>載入中...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 貼文詳情 -->
+  <div id="screenPostDetail" class="screen">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button onclick="backToForum()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回討論區</button>
+      <span style="font-weight:700;">貼文內容</span>
+    </div>
+    <div id="postDetailContent"></div>
+  </div>
+
+  <!-- NGO 後台 -->
+  <div id="screenNgoDashboard" class="screen">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="screen-title">📊 NGO 任務調度中心</div>
+      <button class="btn-small btn-outline" onclick="logoutUser()">登出</button>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active" id="ngoTabTasks" onclick="switchNgoTab('tasks')">任務管理</button>
+      <button class="tab" id="ngoTabKyc" onclick="switchNgoTab('kyc')">市民列表</button>
+      <button class="tab" id="ngoTabMonitor" onclick="switchNgoTab('monitor')">🔍 實時監控</button>
+    </div>
+    <div id="ngoTasksSection" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="data-panel" id="ngoDataPanel">
+        <strong>全區數據綜覽</strong>
+        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:13px; color:var(--text-sub);">
+          <span>待處理任務: <b id="statPending" style="color:var(--accent-orange);">0</b></span>
+          <span>進行中: <b id="statActive" style="color:var(--accent-blue);">0</b></span>
+          <span>已完成: <b id="statDone" style="color:var(--accent-green);">0</b></span>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="openNewTaskForm()">➕ 新增預約任務</button>
+      <button class="btn" style="background:#8e44ad;" onclick="openLiveRequestForm()">🆘 代發長者即時求助</button>
+      <div id="newTaskForm" style="display:none;" class="card">
+        <h4>新增社區預約任務</h4>
+        <input class="input-field" type="text" placeholder="任務名稱" id="newTaskTitle">
+        <input class="input-field" type="text" placeholder="日期 (YYYY-MM-DD)" id="newTaskDate" value="2026-06-20">
+        <input class="input-field" type="text" placeholder="時間段" id="newTaskTime" value="14:00-16:00">
+        <input class="input-field" type="number" placeholder="招募人數" id="newTaskQuota" value="3">
+        <input class="input-field" type="text" placeholder="地點" id="newTaskLocation" value="沙田禾輋邨">
+        <button class="btn" onclick="addNgoTask()">發布並同步至大廳</button>
+        <button class="btn-outline btn" onclick="document.getElementById('newTaskForm').style.display='none'">取消</button>
+      </div>
+      <div id="liveRequestForm" style="display:none;" class="card">
+        <h4>模擬長者發起即時求助</h4>
+        <input class="input-field" type="text" placeholder="求助內容" id="liveReqTitle">
+        <select class="input-field" id="liveReqLocation">
+          <option value="22.382,114.189">沙田市中心</option>
+          <option value="22.373,114.195">沙田圍</option>
+          <option value="22.399,114.191">火炭</option>
+          <option value="22.425,114.228">馬鞍山</option>
+        </select>
+        <button class="btn" onclick="publishLiveRequest()">模擬廣播即時單</button>
+        <button class="btn-outline btn" onclick="document.getElementById('liveRequestForm').style.display='none'">取消</button>
+      </div>
+      <div id="ngoTaskList"></div>
+    </div>
+    <div id="ngoKycSection" style="display:none; flex-direction:column; gap:12px;">
+      <div class="card"><strong>👥 沙田友市民列表</strong><p class="subtitle" style="margin-top:4px;">已註冊的沙田友市民（統一市民制，無需個別審核）</p></div>
+      <div id="kycListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+    <!-- 🔍 實時監控中心 -->
+    <div id="ngoMonitorSection" style="display:none; flex-direction:column; gap:12px;">
+      <div class="data-panel">
+        <strong>🟢 系統狀態總覽</strong>
+        <div style="display:flex;justify-content:space-around;margin-top:8px;text-align:center;">
+          <div><div style="font-size:24px;font-weight:800;color:var(--accent-orange);" id="monPending">0</div><span style="font-size:11px;">待接求助</span></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--accent-blue);" id="monActive">0</div><span style="font-size:11px;">進行中</span></div>
+          <div><div style="font-size:24px;font-weight:800;color:var(--accent-green);" id="monDone">0</div><span style="font-size:11px;">今日完成</span></div>
+          <div><div style="font-size:24px;font-weight:800;color:#fff;" id="monCitizens">0</div><span style="font-size:11px;">註冊市民</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <strong>📋 所有求助個案時間線</strong>
+        <div id="monitorTimeline" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;font-size:13px;">
+          <div style="color:var(--text-sub);text-align:center;padding:8px;">載入中...</div>
+        </div>
+      </div>
+      <div class="card">
+        <strong>👀 社工關注標記</strong>
+        <p style="font-size:12px;color:var(--text-sub);margin-top:4px;">你可以手動標記需要注意的求助個案</p>
+        <button class="btn btn-small btn-outline" onclick="showToast('⚠️ 社工已記錄所有個案，未有異常', 'info')" style="width:auto;">📝 全部標記為已審查</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 即時任務地圖 (Uber 風格) -->
+  <div id="screenLiveMap" class="screen">
+    <div class="flex-row" style="justify-content:space-between; align-items:center;">
+      <button onclick="cancelLiveTask()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--accent-red);font-weight:600;">✕ 取消</button>
+      <span style="font-weight:700;">🚴 導航前往求助者</span>
+      <div style="width:50px;"></div>
+    </div>
+    <div id="liveMap" style="height:320px;"></div>
+    <div class="card" id="uberInfoCard" style="margin-top:-12px;z-index:10;position:relative;">
+      <div style="display:flex;justify-content:space-around;text-align:center;padding:4px 0;">
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">距離</div>
+          <div style="font-size:22px;font-weight:800;color:var(--accent-orange);"><span id="liveDistance">--</span></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">預計到達</div>
+          <div style="font-size:22px;font-weight:800;color:var(--accent-blue);"><span id="liveEta">--</span></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">求助者</div>
+          <div style="font-size:18px;font-weight:700;"><span id="liveNgoName">--</span></div>
+        </div>
+      </div>
+      <hr style="margin:8px 0;">
+      <div id="liveTaskDetail" style="font-size:13px;color:var(--text-sub);text-align:center;"></div>
+    </div>
+    <div id="photoSection" style="display:none;" class="card">
+      <div style="text-align:center;">
+        <strong>📸 拍攝完成紀錄</strong>
+        <p style="font-size:12px;color:var(--text-sub);margin:4px 0;">請拍攝現場情況作為服務紀錄</p>
+        <div id="photoPreview" style="margin:8px auto;width:100%;max-width:240px;height:160px;background:var(--bg-primary);border-radius:16px;border:2px dashed var(--border-color);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <span id="photoPlaceholder" style="color:var(--text-sub);font-size:13px;">📷 未拍攝</span>
+          <img id="photoImage" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:14px;">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn btn-small" onclick="capturePhoto()" style="width:auto;">📸 拍攝</button>
+          <button class="btn btn-small btn-outline" onclick="document.getElementById('photoFileInput').click()" style="width:auto;">📁 選擇相片</button>
+          <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoFile(event)">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-green" id="confirmCompleteBtn" onclick="confirmCompleteWithPhoto()" style="flex:1;" disabled>📸 需要先拍攝</button>
+          <button class="btn btn-outline" onclick="cancelPhoto()" style="flex:0;padding:12px 16px;width:auto;">返回</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;" id="completeActionBar">
+      <button class="btn btn-green" onclick="completeLiveTask()" style="flex:1;">✅ 已到達 · 完成服務</button>
+      <button class="btn btn-outline" onclick="cancelLiveTask()" style="flex:0;padding:12px 16px;width:auto;">✕</button>
+    </div>
+  </div>
+
+  <!-- 討論區 -->
+  <div id="screenForum" class="screen">
+    <div class="flex-row" style="justify-content:space-between;">
+      <div class="screen-title">💬 社區討論區</div>
+      <button class="btn-small btn-outline" onclick="showScreen('screenTaskList')">📋 返回主頁</button>
+    </div>
+    <div class="tab-bar" id="forumTabs">
+      <button class="tab active" onclick="switchForumBoard('shatin')">沙田市中心</button>
+      <button class="tab" onclick="switchForumBoard('campus')">校園生活</button>
+      <button class="tab" onclick="switchForumBoard('secondhand')">二手物資互換</button>
+      <button class="tab" onclick="switchForumBoard('treehole')">🌙 街坊樹洞</button>
+    </div>
+    <div id="postListContainer"></div>
+    <button class="btn" style="margin-top:8px;" onclick="openNewPostForm()">✏️ 發表社區貼文</button>
+    <div id="newPostForm" style="display:none;" class="card">
+      <h4>新增貼文 (匿名發表)</h4>
+      <input class="input-field" type="text" id="newPostTitle" placeholder="標題">
+      <textarea class="input-field" id="newPostContent" placeholder="內容..." style="height:100px; border-radius:15px; resize:none;"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn" onclick="submitPost()">發布貼文</button>
+        <button class="btn-outline btn" onclick="document.getElementById('newPostForm').style.display='none'">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任務詳情 -->
+  <div id="screenTaskDetail" class="screen">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button onclick="showScreen('screenTaskList')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回</button>
+      <span style="font-weight:700;">活動詳情</span>
+    </div>
+    <div id="taskDetailContent"></div>
+  </div>
+
+  <!-- 我的任務 -->
+  <div id="screenMyTasks" class="screen">
+    <div class="screen-title">📌 我的預約日程</div>
+    <p class="subtitle">請準時前往目的地，並完成簽到退</p>
+    <div id="myTaskListContainer" style="display:flex; flex-direction:column; gap:12px;"></div>
+  </div>
+
+  <!-- 公益護照 -->
+  <div id="screenPassport" class="screen">
+    <div class="screen-title">🕊️ 我的公益護照</div>
+    <p class="subtitle">記錄您在沙田累積的愛心時數</p>
+    <div class="card" style="text-align:center; padding:24px 16px;">
+      <div style="font-size:48px; margin-bottom:6px;">⌛</div>
+      <h2 id="totalHoursDisplay" style="font-size:32px; font-weight:800;">0 小時</h2>
+      <p style="color:var(--text-sub);">本年度累積服務時數</p>
+      <div id="badgeDisplay" style="margin-top:10px; color:var(--accent-orange); font-weight:700;"></div>
+    </div>
+    <!-- 🏆 時數排行榜 -->
+    <div class="card">
+      <p style="font-weight:700; color:#ffffff; margin-bottom:10px; border-bottom:1px solid var(--border-color); padding-bottom:6px;">🏆 社區貢獻排行榜</p>
+      <div id="leaderboardContent" style="display:flex;flex-direction:column;gap:6px;">
+        <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:8px;">載入中...</div>
+      </div>
+    </div>
+    <div class="card">
+      <p style="font-weight:700; color:#ffffff; margin-bottom:10px; border-bottom:1px solid var(--border-color); padding-bottom:6px;">🕒 服務足跡歷史</p>
+      <div id="historyEntries" style="display:flex; flex-direction:column; gap:8px;">尚未有服務紀錄</div>
+    </div>
+    <button class="btn btn-outline" onclick="showToast('已模擬匯出您的「沙田社區服務履歷 PDF」！', 'success')">📎 匯出服務履歷證明 (PDF)</button>
+  </div>
+
+  <!-- 義工接單大廳 -->
+  <div id="screenVolunteerBoard" class="screen">
+    <div class="flex-row" style="justify-content:space-between;">
+      <div class="screen-title">🚨 即時求助 · 義工接單</div>
+      <button class="btn-small btn-outline" onclick="showScreen('screenTaskList')">📋 主頁</button>
+    </div>
+    <p class="subtitle">開啟 GPS 可顯示您與求助者的距離</p>
+    <div id="volunteerBoardContent">
+      <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:24px;">
+        <div class="loader"></div><span>載入中...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部導航 -->
+  <div class="bottom-nav" id="appBottomNav">
+    <button class="bottom-nav-item active" onclick="navTo('screenTaskList')" id="nav-screenTaskList">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>首頁</span>
+    </button>
+    <button class="bottom-nav-item" onclick="navTo('screenVolunteerBoard')" id="nav-screenVolunteerBoard">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M12 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M7 13c0-1.1.9-2 2-2h6c1.1 0 2 .9 2 2v1H7v-1z"/></svg><span>義工接單</span>
+    </button>
+    <button class="bottom-nav-item" onclick="navTo('screenForum')" id="nav-screenForum">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>討論區</span>
+    </button>
+    <button class="bottom-nav-item" onclick="navTo('screenMyTasks')" id="nav-screenMyTasks">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg><span>我的日程</span>
+    </button>
+    <button class="bottom-nav-item" onclick="navTo('screenPassport')" id="nav-screenPassport">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg><span>公益護照</span>
+    </button>
+  </div>
+
+  <!-- AI 浮動按鈕 -->
+  <button class="ai-fab" id="aiFabBtn" onclick="openAiChat()">🤖</button>
+
+  <!-- AI 聊天面板 -->
+  <div class="ai-chat-overlay" id="aiChatOverlay">
+    <div class="ai-chat-panel">
+      <div class="ai-chat-header">
+        <span>🤖 沙田社區 AI 語音助手</span>
+        <button onclick="closeAiChat()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#ffffff;">✕</button>
+      </div>
+      <div class="ai-chat-messages" id="aiChatMessages"></div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px;">
+        <button onclick="quickHelp('跌親需要幫手')" style="white-space:nowrap;background:#3d2222;border:1px solid #e74c3c;color:#ff6b6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🆘 跌親求助</button>
+        <button onclick="quickHelp('買餸/物資需要幫手')" style="white-space:nowrap;background:#2b3d22;border:1px solid #4caf50;color:#6bff6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🛒 買餸求助</button>
+        <button onclick="quickHelp('唔舒服需要幫手')" style="white-space:nowrap;background:#2b223c;border:1px solid #9c27b0;color:#ce93d8;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🤒 唔舒服</button>
+      </div>
+      <div class="ai-chat-input-area">
+        <button class="mic-btn" id="aiMicBtn" onclick="toggleAiVoiceInput()">🎤</button>
+        <input class="ai-chat-input" id="aiChatInput" placeholder="直接打字或使用語音對話..." onkeypress="if(event.key==='Enter')sendAiMessage()">
+        <button class="btn btn-small" onclick="sendAiMessage()" style="width:auto;">發送</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 通知容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ==================== 雜湊輔助 ====================
+  async function sha256(message) {
+    if (crypto && crypto.subtle) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      return btoa(message).split('').reverse().join('');
+    }
+  }
+
+  // ==================== Toast 通知系統 ====================
+  function showToast(msg, type) {
+    type = type || 'info';
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 3200);
+  }
+
+  // ==================== 資料持久化 ====================
+  function getFromStorage(key, defaultValue) {
+    try {
+      const val = localStorage.getItem('shatin_link_' + key);
+      return val ? JSON.parse(val) : defaultValue;
+    } catch(e) { return defaultValue; }
+  }
+  function saveToStorage(key, value) {
+    try {
+      localStorage.setItem('shatin_link_' + key, JSON.stringify(value));
+    } catch(e) {
+      if (e.name === 'QuotaExceededError') {
+        showToast('儲存空間已滿，請清理舊紀錄', 'error');
+        // 緊急清理：刪最舊的服務紀錄
+        if (key === 'history') {
+          const trimmed = (Array.isArray(value) ? value : []).slice(-20);
+          try { localStorage.setItem('shatin_link_' + key, JSON.stringify(trimmed)); } catch(_){}
+        }
+      }
+    }
+  }
+
+  // 🔧 定期數據清理（防止 localStorage 爆滿）
+  function dataCleanup() {
+    const now = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+    // 清理已完成超 7 日的求助
+    const cleanedRequests = liveRequests.filter(r => {
+      if (r.status === 'completed' && (now - r.id) > SEVEN_DAYS) return false;
+      return true;
+    });
+    if (cleanedRequests.length !== liveRequests.length) {
+      liveRequests = cleanedRequests;
+      saveToStorage('liveRequests', liveRequests);
+    }
+
+    // 服務紀錄只保留最近 50 條
+    if (serviceHistory.length > 50) {
+      serviceHistory = serviceHistory.slice(-50);
+      saveToStorage('history', serviceHistory);
+    }
+
+    // 清理超過 50KB 的舊相片 base64（只保留小縮圖）
+    const MAX_PHOTO_LEN = 50000;
+    let historyChanged = false;
+    serviceHistory.forEach(item => {
+      if (item.photo && item.photo.length > MAX_PHOTO_LEN) {
+        item.photo = item.photo.substring(0, MAX_PHOTO_LEN); // truncate
+        historyChanged = true;
+      }
+    });
+    if (historyChanged) saveToStorage('history', serviceHistory);
+  }
+
+  // ==================== 全域變數初始化 ====================
+  const DEFAULT_USERS = [
+    { userId: 'u1', phone: "98765432", passwordHash: "", name: "陳大文", role: "citizen", approved: true },
+    { userId: 'u2', phone: "91234567", passwordHash: "", name: "阿強", role: "citizen", approved: true },
+    { userId: 'u3', phone: "90001111", passwordHash: "", name: "張主任 (NGO)", role: "ngo", approved: true }
+  ];
+
+  const DEFAULT_TASKS = [
+    { id: 101, ngo: '沙田長者鄰舍中心', title: '週六獨居長者派飯小幫手', date: '2026-06-20', time: '11:00-13:00', location: '沙田禾輋邨德和樓地下', quota: 3, enrolled: [], completed: [], icon: '🍱', description: '協助中心為區內獨居長者派發熱騰騰的愛心飯盒。', signIns: {} },
+    { id: 102, ngo: '馬鞍山社區服務社', title: '海濱長廊減廢推廣行動', date: '2026-06-21', time: '09:00-12:00', location: '馬鞍山海濱長廊', quota: 5, enrolled: [], completed: [], icon: '🌱', description: '向街坊宣傳源頭減廢，清潔海濱長廊環境。', signIns: {} }
+  ];
+
+  const DEFAULT_POSTS = {
+    shatin: [
+      { id: 1, title: '瀝源邨街坊互助', content: '新城市廣場今晚有物資分配，有需要嘅長者可以去看看。', anon: '城門河畔的貓', likes: 6, liked: [] },
+      { id: 2, title: '禾輋邨有冇人見到隻黃貓？', content: '最近成日喺禾輋商場附近見到一隻黃貓，好親人，唔知有冇人識佢主人？', anon: '禾輋街坊', likes: 3, liked: [] },
+      { id: 3, title: '沙田公園新開的咖啡店', content: '試咗佢哋嘅 flat white，幾好！大家可以去試吓。', anon: '瀝源街坊', likes: 8, liked: [] }
+    ],
+    campus: [
+      { id: 4, title: '搵人一齊溫書（大圍）', content: 'DSE 數學，有冇人想組study group？', anon: '沙田學生哥', likes: 2, liked: [] },
+      { id: 5, title: '沙田IVE附近有冇平價午餐推介？', content: '每日食飯好貴，各位同學有冇推薦？', anon: 'IVE學生', likes: 5, liked: [] }
+    ],
+    secondhand: [
+      { id: 6, title: '送出 IKEA 書枱（大圍自取）', content: '新舊如圖，有意PM，希望可以幫到有需要嘅同學。', anon: '大圍師姐', likes: 1, liked: [] },
+      { id: 7, title: '求二手單車一部', content: '想買一部二手單車代步，沙田區內交收。', anon: '單車友', likes: 0, liked: [] }
+    ],
+    treehole: [
+      { id: 8, title: '有時覺得好大壓力', content: '返學好攰，但又唔敢同人講...', anon: '迷途小書蟲', likes: 12, liked: [] },
+      { id: 9, title: '多謝沙田長者鄰舍中心', content: '上星期有義工幫我整好咗個水喉，真係好多謝佢哋！', anon: '感恩婆婆', likes: 9, liked: [] }
+    ]
+  };
+
+  const shatinLocations = {
+    "22.382,114.189": "沙田市中心",
+    "22.373,114.195": "沙田圍",
+    "22.399,114.191": "火炭",
+    "22.425,114.228": "馬鞍山"
+  };
+
+  let usersList = getFromStorage('users', null);
+  if (!usersList) {
+    const preHashedPw = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
+    DEFAULT_USERS.forEach(u => u.passwordHash = preHashedPw);
+    usersList = DEFAULT_USERS;
+    saveToStorage('users', usersList);
+  }
+
+  let tasks = getFromStorage('tasks', DEFAULT_TASKS);
+  let liveRequests = getFromStorage('liveRequests', []);
+  let posts = getFromStorage('posts', DEFAULT_POSTS);
+  let serviceHistory = getFromStorage('history', []);
+  let currentUser = getFromStorage('currentUser', null);
+  let isOnline = getFromStorage('isOnline', false);
+  let liveTaskAccepted = getFromStorage('liveTaskAccepted', null);
+  let currentForumBoard = 'shatin';
+  let liveMapInstance = null;
+  let speechRecognitionInstance = null;
+  let isRecording = false;
+  let chatHistory = [];
+  const POSTS_PER_PAGE = 5;
+  let forumPage = {};
+
+  // ==================== AI API 設定 ====================
+  // 本地測試用：python ai_proxy.py
+  // 上線用：改做 Cloudflare Worker URL（見下方注釋）
+  const AI_API_URL = 'http://127.0.0.1:5003/api/chat';
+  // Cloudflare Worker 上線版（申請好後取消下行注釋，注釋上行）：
+  // const AI_API_URL = 'https://shatin-ai-proxy.你的名字.workers.dev/api/chat';
+
+  // ==================== 語音與 TTS ====================
+  function speakText(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'zh-HK';
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
+  function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const micBtn = document.getElementById('aiMicBtn');
+    if (!SpeechRecognition) {
+      if (micBtn) { micBtn.disabled = true; micBtn.title = '瀏覽器不支援語音輸入'; }
+      return;
+    }
+    speechRecognitionInstance = new SpeechRecognition();
+    speechRecognitionInstance.lang = 'zh-HK';
+    speechRecognitionInstance.continuous = false;
+    speechRecognitionInstance.interimResults = false;
+    speechRecognitionInstance.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
+    speechRecognitionInstance.onresult = (e) => { document.getElementById('aiChatInput').value = e.results[0][0].transcript; };
+    speechRecognitionInstance.onerror = () => { stopRecordingUI(); };
+    speechRecognitionInstance.onend = () => { stopRecordingUI(); };
+  }
+
+  function stopRecordingUI() {
+    isRecording = false;
+    const mic = document.getElementById('aiMicBtn');
+    if (mic) mic.classList.remove('recording');
+    const vh = document.getElementById('voiceHelpBtn');
+    if (vh) vh.style.background = 'linear-gradient(135deg,#ff6b35,#e74c3c)';
+  }
+
+  // 🎤 語音一鍵求助（長者版）
+  function startVoiceHelp() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { showToast('瀏覽器不支援語音輸入', 'error'); return; }
+    if (isRecording) {
+      speechRecognitionInstance.stop();
+      return;
+    }
+    speechRecognitionInstance = new SpeechRecognition();
+    speechRecognitionInstance.lang = 'zh-HK';
+    speechRecognitionInstance.continuous = false;
+    speechRecognitionInstance.interimResults = false;
+
+    const btn = document.getElementById('voiceHelpBtn');
+    const hint = document.getElementById('voiceHelpHint');
+    if (btn) { btn.style.background = 'linear-gradient(135deg,#e74c3c,#ff0000)'; isRecording = true; }
+    if (hint) hint.innerText = '🎙️ 正在聆聽... 講完放手';
+
+    speechRecognitionInstance.onresult = (e) => {
+      const text = e.results[0][0].transcript;
+      if (hint) hint.innerText = `✅ 已辨識：「${text}」`;
+      stopRecordingUI();
+      // 自動經 AI chat 流程發送（會觸發關鍵字偵測→發布求助）
+      document.getElementById('aiChatInput').value = text;
+      sendAiMessage();
+      openAiChat();
+    };
+
+    speechRecognitionInstance.onerror = () => {
+      stopRecordingUI();
+      if (hint) hint.innerText = '❌ 聽唔到，㩒多次再試';
+    };
+
+    speechRecognitionInstance.onend = () => { stopRecordingUI(); };
+    speechRecognitionInstance.start();
+  }
+
+  function toggleAiVoiceInput() {
+    if (!speechRecognitionInstance) initSpeechRecognition();
+    if (!speechRecognitionInstance) return;
+    if (isRecording) speechRecognitionInstance.stop();
+    else speechRecognitionInstance.start();
+  }
+
+  // ==================== 畫面控制 ====================
+  function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(screenId);
+    if (target) target.classList.add('active');
+    if (screenId === 'screenForum') renderForumPosts();
+    else if (screenId === 'screenTaskList') renderMainScreen();
+    else if (screenId === 'screenMyTasks') renderMyTasks();
+    else if (screenId === 'screenPassport') updatePassport();
+    else if (screenId === 'screenVolunteerBoard') { renderVolunteerBoard(); startGPS(); }
+    else if (screenId === 'screenNgoDashboard') { renderNgoTasks(); updateNgoDashboardData(); }
+    else if (screenId === 'screenLiveMap' && liveTaskAccepted) {
+      setTimeout(() => {
+        const pos = volunteerGPS || { lat: 22.382, lng: 114.189 };
+        initLeafletMap(pos, { lat: liveTaskAccepted.lat, lng: liveTaskAccepted.lng });
+      }, 200);
+    }
+    const bottomNav = document.getElementById('appBottomNav');
+    if (currentUser && currentUser.role !== 'ngo' && 
+        ['screenLogin','screenRegister','screenNgoLogin'].indexOf(screenId) === -1) {
+      bottomNav.style.display = 'flex';
+      document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+      const activeNav = document.getElementById('nav-' + screenId);
+      if (activeNav) activeNav.classList.add('active');
+    } else {
+      bottomNav.style.display = 'none';
+    }
+  }
+
+  function navTo(screenId) { showScreen(screenId); }
+
+  // ==================== 登入系統 ====================
+  async function phoneLogin() {
+    const phone = document.getElementById('phoneInput').value;
+    const pw = document.getElementById('passwordInput').value;
+    const hashed = await sha256(pw);
+    const user = usersList.find(u => u.phone === phone && u.passwordHash === hashed);
+    if (!user) { showToast("手機號碼或密碼不正確", 'error'); return; }
+    currentUser = user;
+    saveToStorage('currentUser', currentUser);
+    updateModeUI();
+  }
+
+  function smartLogin() {
+    if (confirm("【智方便驗證】\n姓名：陳大文\n身份證：A123456(7)\n確認登入？")) {
+      currentUser = usersList.find(u => u.phone === "98765432");
+      saveToStorage('currentUser', currentUser);
+      updateModeUI();
+    }
+  }
+
+  async function registerAccount() {
+    const name = document.getElementById('regName').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    if (!name || !phone || !password) { showToast("請完整填寫欄位", 'error'); return; }
+    if (usersList.some(u => u.phone === phone)) { showToast("手機已被註冊", 'error'); return; }
+    const hashedPw = await sha256(password);
+    const newUser = {
+      userId: 'user_' + Date.now(),
+      phone, passwordHash: hashedPw, name,
+      role: 'citizen',
+      approved: true
+    };
+    usersList.push(newUser);
+    saveToStorage('users', usersList);
+    showToast("註冊成功！歡迎成為沙田友市民 🎉", 'success');
+    showScreen('screenLogin');
+  }
+
+  function ngoLogin() {
+    const acc = document.getElementById('ngoAccount').value;
+    const pw = document.getElementById('ngoPassword').value;
+    if (acc === 'ngo_shatin' && pw === 'demo1234') {
+      currentUser = { userId: 'ngo1', name: "沙田長者鄰舍中心", role: "ngo" };
+      saveToStorage('currentUser', currentUser);
+      updateModeUI();
+    } else showToast("帳號或密碼錯誤", 'error');
+  }
+
+  function logoutUser() {
+    currentUser = null; isOnline = false; liveTaskAccepted = null;
+    saveToStorage('currentUser', null); saveToStorage('isOnline', false); saveToStorage('liveTaskAccepted', null);
+    updateModeUI();
+  }
+
+  // ==================== UI 更新 ====================
+  function updateModeUI() {
+    const modeStatus = document.getElementById('modeStatus');
+    const badge = document.getElementById('roleBadgeContainer');
+    const globalLogout = document.getElementById('globalLogoutBtn');
+    if (!currentUser) {
+      modeStatus.innerText = '📱 沙田友 Sha Tin Link';
+      badge.innerHTML = '';
+      if (globalLogout) globalLogout.style.display = 'none';
+      showScreen('screenLogin');
+      return;
+    }
+    if (globalLogout) globalLogout.style.display = 'block';
+    if (currentUser.role === 'ngo') {
+      modeStatus.innerText = '🏢 NGO 後台模式';
+      badge.innerHTML = '<span class="role-badge ngo">NGO 管理員</span>';
+      showScreen('screenNgoDashboard');
+      renderNgoTasks();
+      updateNgoDashboardData();
+    } else {
+      modeStatus.innerText = '👥 保良局朱正賢小學呈獻';
+      badge.innerHTML = '<span class="role-badge citizen">沙田友市民</span>';
+      document.getElementById('volunteerStatusSection').style.display = 'none';
+      document.getElementById('kycAwaitingAlert').style.display = 'none';
+      renderMainScreen();
+      showScreen('screenTaskList');
+    }
+  }
+
+  function initOnlineToggleUI() {
+    const toggle = document.getElementById('onlineToggle');
+    const statusText = document.getElementById('onlineStatusText');
+    if (isOnline) { toggle.classList.add('active'); statusText.innerText = '🟢 你正在互助模式'; }
+    else { toggle.classList.remove('active'); statusText.innerText = '🔴 你處於離線狀態'; }
+  }
+
+  function toggleOnline() {
+    isOnline = !isOnline;
+    saveToStorage('isOnline', isOnline);
+    initOnlineToggleUI();
+    renderLiveRequests();
+  }
+
+  // ==================== 主頁渲染 ====================
+  function renderMainScreen() {
+    document.getElementById('currentUserName').innerText = "歡迎，" + (currentUser ? currentUser.name : "");
+    renderNgoList();
+    renderTaskList();
+    renderLiveRequests();
+  }
+
+  function renderNgoList() {
+    const list = [
+      { name: '沙田長者鄰舍中心', desc: '服務沙田圍、瀝源邨長者日常探訪與派飯', icon: '🧓' },
+      { name: '馬鞍山社區服務社', desc: '推動環保及海濱清潔，舉辦社區教育工作坊', icon: '🌊' },
+      { name: '基督教香港崇真會沙田服務處', desc: '提供長者關懷、青少年發展及社區支援服務', icon: '⛪' },
+      { name: '香港青年協會沙田青年空間', desc: '舉辦青年活動、技能培訓及義工服務計劃', icon: '🧑‍🤝‍🧑' }
+    ];
+    document.getElementById('ngoListContainer').innerHTML = list.map(item => `
+      <div class="ngo-card">
+        <div class="flex-row">
+          <span style="font-size:26px;">${item.icon}</span>
+          <div>
+            <strong>${item.name}</strong>
+            <p style="font-size:12px;color:var(--text-sub);">${item.desc}</p>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderTaskList() {
+    const container = document.getElementById('taskListContainer');
+    container.innerHTML = tasks.map(task => {
+      const enrolledCount = task.enrolled ? task.enrolled.length : 0;
+      const left = task.quota - enrolledCount;
+      const isMyEnrolled = task.enrolled && currentUser && task.enrolled.includes(currentUser.userId);
+      return `<div class="activity-card" onclick="openTaskDetail(${task.id})">
+        <div class="activity-cover" style="background:linear-gradient(135deg, #FF6B35, #ff8c5a);">${task.icon}</div>
+        <div class="activity-info">
+          <div class="flex-row" style="justify-content:space-between;margin-bottom:6px;"><span class="badge">${task.ngo}</span><span style="color:var(--accent-orange);">剩餘 ${left} 名額</span></div>
+          <strong>${task.title}</strong><p style="font-size:12px;">📅 ${task.date} (${task.time})</p><p style="font-size:12px;">📍 ${task.location}</p>
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+            ${isMyEnrolled ? '<span class="npc-badge">已報名</span>' : (left > 0 ? `<button class="btn btn-small btn-blue" onclick="event.stopPropagation();enrollTask(${task.id})">立即報名</button>` : '<button class="btn btn-small" disabled>額滿</button>')}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderLiveRequests() {
+    const container = document.getElementById('liveRequestContainer');
+    container.innerHTML = '';
+
+    // 顯示自己的求助進度（只顯示等待中的，已接單/已完成自動下架）
+    const myReqs = liveRequests.filter(r => r.requesterUserId === currentUser?.userId && r.status === 'pending');
+    const onlineCount = isOnline ? 1 : 0; // 🔧 統計在線義工（簡化：至少自己如果在線就顯示）
+
+    if (myReqs.length) {
+      // 🔧 卡式滑動容器（左滑右滑切換求助個案）
+      let cardsHtml = myReqs.map((req, idx) => {
+        const ago = timeSince(req.id);
+        let distStr = '', volMsg = '';
+        if (volunteerGPS) {
+          const d = getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng);
+          distStr = d < 1 ? (d * 1000).toFixed(0) + 'm' : d.toFixed(2) + 'km';
+        }
+        // 有在線義工就顯示通知
+        if (isOnline) volMsg = '<span style="color:#2ecc71;font-weight:600;">✅ 有義工在線上可接單</span>';
+        return `
+          <div class="help-card" style="flex:0 0 90%; scroll-snap-align:center; background:#2b223c; border-radius:20px; padding:16px; margin:0 5%; border:1px solid var(--border-color);">
+            <div class="flex-row" style="justify-content:space-between;margin-bottom:6px;">
+              <span class="badge" style="background:#512da8;">📋 個案 ${idx+1}/${myReqs.length}</span>
+              <span style="font-size:11px;color:var(--text-sub);">${ago}</span>
+            </div>
+            <strong style="font-size:15px;">${req.title}</strong>
+            <div style="display:flex;gap:12px;font-size:12px;color:var(--text-sub);margin:6px 0;">
+              <span>📍 ${req.locationName}</span>
+              ${distStr ? `<span>📏 ${distStr}</span>` : ''}
+            </div>
+            ${volMsg ? `<div style="margin-top:6px;font-size:13px;">${volMsg}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">
+              🟡 等待義工接單中 · 接單後會即時通知你
+            </div>
+          </div>`;
+      }).join('');
+
+      let swipeHtml = `
+        <div style="font-weight:700;margin-bottom:6px;">🆘 我的求助 <span style="color:var(--accent-orange);">(${myReqs.length})</span></div>
+        <div class="swipe-hint" style="font-size:11px;color:var(--text-sub);text-align:center;margin-bottom:6px;">👈 左右滑動睇下一個個案 👉</div>
+        <div class="help-swipe" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:8px;padding-bottom:4px;">
+          ${cardsHtml}
+        </div>`;
+      container.innerHTML = swipeHtml;
+    }
+
+    // 顯示附近可接的求助（需開啟上線狀態）
+    if (!isOnline) return;
+    const pendings = liveRequests.filter(r => r.status === 'pending' && r.requesterUserId !== currentUser?.userId);
+    if (!pendings.length) return;
+    container.innerHTML += '<div style=\"font-weight:700; color:#fff; margin:12px 0 8px 0;\">🔔 附近街坊求助</div>' + pendings.map(req => `
+      <div class="card" style="background:#3d2222; border-color:#e74c3c; margin-bottom:10px;">
+        <div class="flex-row" style="justify-content:space-between;"><span class="badge" style="background:#7f2727;\">即時呼求</span><span style="color:var(--accent-red);\">🚨 剛剛發起</span></div>
+        <strong>${req.title}</strong><p style="font-size:12px;\">📍 ${req.locationName}</p>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;\"><button class="btn btn-small btn-red\" data-action=\"accept\" data-id=\"${req.id}\">🚀 即刻出發幫手</button></div>
+      </div>
+    `).join('');
+  }
+
+  function openTaskDetail(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const enrolled = task.enrolled && currentUser && task.enrolled.includes(currentUser.userId);
+    document.getElementById('taskDetailContent').innerHTML = `
+      <div class="card">
+        <div class="activity-cover" style="background:linear-gradient(135deg, #FF6B35, #ff8c5a); border-radius:15px; height:70px;">${task.icon}</div>
+        <h3>${task.title}</h3><span class="badge">${task.ngo}</span><hr>
+        <p>📅 ${task.date} 🕒 ${task.time} 📍 ${task.location}</p>
+        <p>📖 ${task.description}</p>
+        ${enrolled ? '<button class="btn btn-outline">已報名</button>' : '<button class="btn" onclick="enrollTask('+task.id+')">報名</button>'}
+      </div>`;
+    showScreen('screenTaskDetail');
+  }
+
+  function enrollTask(id) {
+    if (!currentUser) { showToast("請先登入", 'error'); return; }
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (!task.enrolled) task.enrolled = [];
+    if (task.enrolled.includes(currentUser.userId)) { showToast("已報名", 'error'); return; }
+    task.enrolled.push(currentUser.userId);
+    saveToStorage('tasks', tasks);
+    showToast("報名成功！", 'success');
+    renderTaskList();
+    showScreen('screenTaskList');
+  }
+
+  function renderMyTasks() {
+    const container = document.getElementById('myTaskListContainer');
+    const myEnrolled = tasks.filter(t => t.enrolled && currentUser && t.enrolled.includes(currentUser.userId));
+    if (!myEnrolled.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-sub);">📅 暫時沒有預約行程</div>';
+      return;
+    }
+    container.innerHTML = myEnrolled.map(task => {
+      const userId = currentUser.userId;
+      const signIns = task.signIns || {};
+      const hasSignedIn = signIns[userId] && signIns[userId].signedIn;
+      const hasSignedOut = signIns[userId] && signIns[userId].signedOut;
+      let btn = '';
+      if (!hasSignedIn && !hasSignedOut) btn = `<button class="btn btn-small" onclick="simulateSignIn(${task.id})">📍簽到</button>`;
+      else if (hasSignedIn && !hasSignedOut) btn = `<button class="btn btn-small btn-green" onclick="simulateSignOut(${task.id})">✅簽退</button>`;
+      else btn = '<span class="npc-badge">✔ 已完成</span>';
+      return `<div class="card"><div style="display:flex; justify-content:space-between;"><strong>${task.title}</strong>${btn}</div><p style="font-size:12px;">${task.date} ${task.time} · ${task.location}</p></div>`;
+    }).join('');
+  }
+
+  function simulateSignIn(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (!task.signIns) task.signIns = {};
+    const userId = currentUser.userId;
+    if (task.signIns[userId]?.signedOut) { showToast("已完成服務", 'error'); return; }
+    task.signIns[userId] = { signedIn: true, signedOut: false };
+    saveToStorage('tasks', tasks);
+    showToast("簽到成功", 'success');
+    renderMyTasks();
+  }
+
+  function simulateSignOut(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (!task.signIns) task.signIns = {};
+    const userId = currentUser.userId;
+    if (!task.signIns[userId]?.signedIn) { showToast("尚未簽到", 'error'); return; }
+    task.signIns[userId].signedOut = true;
+    if (!task.completed) task.completed = [];
+    if (!task.completed.includes(userId)) task.completed.push(userId);
+    saveToStorage('tasks', tasks);
+    serviceHistory.push({ title: task.title, ngo: task.ngo, date: task.date, hours: 2, userId });
+    saveToStorage('history', serviceHistory);
+    showToast("簽退成功！獲得2小時", 'success');
+    renderMyTasks();
+    updatePassport();
+  }
+
+  // 🔧 改為 async，從 IndexedDB 載入相片
+  async function updatePassport() {
+    const total = serviceHistory.reduce((sum, h) => sum + h.hours, 0);
+    document.getElementById('totalHoursDisplay').innerText = total + ' 小時';
+    const container = document.getElementById('historyEntries');
+    
+    if (!serviceHistory.length) {
+      container.innerHTML = '尚未有服務紀錄';
+      let badge = '✨ 新手沙田友';
+      if (total >= 10) badge = '👑 殿堂沙田大長老 (金章)';
+      else if (total >= 6) badge = '⭐ 核心沙田守護者 (銀章)';
+      else if (total >= 2) badge = '🌟 社區愛心使者';
+      document.getElementById('badgeDisplay').innerText = badge;
+      return;
+    }
+
+    // 先渲染基本列表（文字部份）
+    let html = serviceHistory.slice().reverse().map((item, idx) => `
+      <div style="border-bottom:1px solid #333;padding:8px 0;" id="historyRow_${idx}">
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span>📌 ${item.date} · ${item.title}</span>
+          <span style="color:var(--accent-green);">+${item.hours} 小時</span>
+        </div>
+        ${(item.photoKey || item.photo) ? `<div id="photoSlot_${idx}" style="margin-top:6px;color:var(--text-sub);font-size:12px;">🖼️ 載入中...</div>` : ''}
+      </div>
+    `).join('');
+    container.innerHTML = html;
+
+    // 非同步載入 IndexedDB 相片
+    serviceHistory.slice().reverse().forEach(async (item, idx) => {
+      if (item.photoKey) {
+        const data = await loadPhoto(item.photoKey);
+        const slot = document.getElementById('photoSlot_' + idx);
+        if (slot && data) {
+          slot.innerHTML = `<img src="${data}" style="width:100%;max-height:120px;object-fit:cover;border-radius:12px;cursor:pointer;" onclick="window.open(this.src)">`;
+        } else if (slot) {
+          slot.innerHTML = '📷 相片已過期';
+        }
+      } else if (item.photo) {
+        // 兼容舊版 localStorage base64 photo
+        const slot = document.getElementById('photoSlot_' + idx);
+        if (slot) slot.innerHTML = `<img src="${item.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:12px;cursor:pointer;" onclick="window.open(this.src)">`;
+      }
+    });
+
+    let badge = '✨ 新手沙田友';
+    if (total >= 10) badge = '👑 殿堂沙田大長老 (金章)';
+    else if (total >= 6) badge = '⭐ 核心沙田守護者 (銀章)';
+    else if (total >= 2) badge = '🌟 社區愛心使者';
+    document.getElementById('badgeDisplay').innerText = badge;
+    renderLeaderboard();
+  }
+
+  // ==================== 排行榜 ====================
+  function renderLeaderboard() {
+    const container = document.getElementById('leaderboardContent');
+    // Aggregate hours by userId, then map to user names
+    const hoursByUser = {};
+    serviceHistory.forEach(item => {
+      hoursByUser[item.userId] = (hoursByUser[item.userId] || 0) + item.hours;
+    });
+    // Find user names from usersList
+    const rankings = Object.entries(hoursByUser)
+      .map(([userId, hours]) => {
+        const user = usersList.find(u => u.userId === userId);
+        return { name: user?.name || '未知街坊', hours };
+      })
+      .sort((a, b) => b.hours - a.hours);
+
+    if (!rankings.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-sub);padding:8px;">未有服務紀錄</div>';
+      return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    container.innerHTML = rankings.map((r, i) => `
+      <div class="flex-row" style="justify-content:space-between;padding:6px 0;${i < rankings.length-1 ? 'border-bottom:1px solid var(--border-color)' : ''}">
+        <span>${i < 3 ? medals[i] : i+1} ${r.name}</span>
+        <span style="color:var(--accent-orange);font-weight:700;">${r.hours} 小時</span>
+      </div>
+    `).join('');
+  }
+
+  // ==================== GPS 定位輔助 ====================
+  let volunteerGPS = null; // {lat, lng}
+  let gpsWatchId = null;
+
+  function startGPS() {
+    if (!navigator.geolocation) return;
+    gpsWatchId = navigator.geolocation.watchPosition(
+      pos => {
+        volunteerGPS = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        // 如果地圖正在顯示，即時更新
+        if (document.getElementById('screenVolunteerBoard').classList.contains('active')) renderVolunteerBoard();
+        if (document.getElementById('screenLiveMap').classList.contains('active') && liveTaskAccepted) {
+          initLeafletMap(volunteerGPS, { lat: liveTaskAccepted.lat, lng: liveTaskAccepted.lng });
+        }
+      },
+      err => console.warn('GPS 定位失敗:', err.message),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }
+
+  function stopGPS() {
+    if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+  }
+
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function timeSince(date) {
+    const seconds = Math.floor((Date.now() - date) / 1000);
+    if (seconds < 60) return '剛剛';
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}分鐘前`;
+    const hours = Math.floor(mins / 60);
+    return `${hours}小時前`;
+  }
+
+  function acceptLiveRequest(id) {
+    const req = liveRequests.find(r => r.id === id);
+    if (!req || req.status !== 'pending') { showToast("此單已被接走或不存在", 'error'); return; }
+    req.status = 'assigned';
+    req.assignedVolunteerId = currentUser.userId;
+    saveToStorage('liveRequests', liveRequests);
+    liveTaskAccepted = req;
+    saveToStorage('liveTaskAccepted', liveTaskAccepted);
+    showToast("接單成功！前往導航", 'success');
+    showScreen('screenLiveMap');
+  }
+
+  function initLeafletMap(volPos, targetPos) {
+    const mapDiv = document.getElementById('liveMap');
+    if (!mapDiv || mapDiv.offsetParent === null) { setTimeout(() => initLeafletMap(volPos, targetPos), 200); return; }
+    if (liveMapInstance) liveMapInstance.remove();
+    liveMapInstance = L.map('liveMap', { zoomControl: false, attributionControl: false }).setView([volPos.lat, volPos.lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(liveMapInstance);
+    L.marker([volPos.lat, volPos.lng], { icon: L.divIcon({ html: '🚴', className: '', iconSize: [30,30] }) }).addTo(liveMapInstance).bindPopup("您的位置");
+    L.marker([targetPos.lat, targetPos.lng], { icon: L.divIcon({ html: '🆘', className: '', iconSize: [30,30] }) }).addTo(liveMapInstance).bindPopup("求助點");
+    L.polyline([[volPos.lat, volPos.lng], [targetPos.lat, targetPos.lng]], { color: '#ff6b35', weight: 4, dashArray: '5,10' }).addTo(liveMapInstance);
+    // Fit bounds to show both markers
+    liveMapInstance.fitBounds([[volPos.lat, volPos.lng], [targetPos.lat, targetPos.lng]], { padding: [40, 40] });
+    const dist = getDistance(volPos.lat, volPos.lng, targetPos.lat, targetPos.lng);
+    document.getElementById('liveDistance').innerText = dist < 1 ? (dist * 1000).toFixed(0) + ' 米' : dist.toFixed(2) + ' 公里';
+    document.getElementById('liveEta').innerText = dist < 1 ? '約 ' + Math.round(dist * 12 * 60 / 60) + ' 分鐘' : Math.round(dist * 12) + ' 分鐘';
+    document.getElementById('liveNgoName').innerText = liveTaskAccepted.requesterName || '長者';
+    const detail = document.getElementById('liveTaskDetail');
+    if (detail) detail.innerText = liveTaskAccepted.title || '';
+  }
+
+  // ==================== IndexedDB 相片儲存（防 localStorage 爆滿） ====================
+  const PHOTO_DB_NAME = 'shatin_photos';
+  let photoDB = null;
+
+  function openPhotoDB() {
+    return new Promise((resolve, reject) => {
+      if (photoDB) return resolve(photoDB);
+      const req = indexedDB.open(PHOTO_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('photos', { keyPath: 'id' }); };
+      req.onsuccess = () => { photoDB = req.result; resolve(photoDB); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function savePhoto(id, base64Data) {
+    try {
+      const db = await openPhotoDB();
+      const tx = db.transaction('photos', 'readwrite');
+      tx.objectStore('photos').put({ id, data: base64Data, ts: Date.now() });
+      return new Promise(resolve => { tx.oncomplete = resolve; tx.onerror = () => resolve(false); });
+    } catch(e) { return false; }
+  }
+
+  async function loadPhoto(id) {
+    try {
+      const db = await openPhotoDB();
+      const tx = db.transaction('photos', 'readonly');
+      const store = tx.objectStore('photos');
+      const req = store.get(id);
+      return new Promise(resolve => {
+        req.onsuccess = () => resolve(req.result?.data || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch(e) { return null; }
+  }
+
+  async function deleteOldPhotos(maxAgeDays) {
+    try {
+      const db = await openPhotoDB();
+      const tx = db.transaction('photos', 'readwrite');
+      const store = tx.objectStore('photos');
+      const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+      const req = store.openCursor();
+      req.onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (cursor.value.ts < cutoff) cursor.delete();
+          cursor.continue();
+        }
+      };
+    } catch(e) {}
+  }
+
+  // ==================== 完成任務 + 拍攝紀錄 ====================
+  let pendingPhotoData = null; // base64 photo
+
+  function completeLiveTask() {
+    // 唔直接完成，先顯示影相區
+    document.getElementById('photoSection').style.display = 'block';
+    document.getElementById('completeActionBar').style.display = 'none';
+  }
+
+  function capturePhoto() {
+    // 用手機相機或電腦 webcam
+    const input = document.getElementById('photoFileInput');
+    input.click(); // mobile 會開相機，desktop 開檔案揀選
+  }
+
+  function handlePhotoFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      pendingPhotoData = e.target.result;
+      document.getElementById('photoPlaceholder').style.display = 'none';
+      const img = document.getElementById('photoImage');
+      img.src = pendingPhotoData;
+      img.style.display = 'block';
+      document.getElementById('confirmCompleteBtn').disabled = false;
+      document.getElementById('confirmCompleteBtn').innerHTML = '✅ 確認完成';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function confirmCompleteWithPhoto() {
+    if (!liveTaskAccepted || !pendingPhotoData) {
+      showToast("請先拍攝或揀選相片", 'error');
+      return;
+    }
+    const req = liveRequests.find(r => r.id === liveTaskAccepted.id);
+    if (req) { req.status = 'completed'; saveToStorage('liveRequests', liveRequests); }
+    // 🔧 用 IndexedDB 取代 localStorage（容量大好多）
+    const photoId = 'task_' + liveTaskAccepted.id;
+    await savePhoto(photoId, pendingPhotoData);
+    // 只儲存 photo key 到 serviceHistory，唔儲 base64
+    serviceHistory.push({
+      title: "即時互助: " + liveTaskAccepted.title,
+      ngo: "沙田友 AI 系統",
+      date: new Date().toISOString().split('T')[0],
+      hours: 1,
+      userId: currentUser.userId,
+      photoKey: photoId,
+    });
+    saveToStorage('history', serviceHistory);
+    liveTaskAccepted = null; saveToStorage('liveTaskAccepted', null);
+    pendingPhotoData = null;
+    stopGPS();
+    showToast("任務完成！獲得 1 小時服務時數 🎉", 'success');
+    navTo('screenVolunteerBoard');
+  }
+
+  function cancelPhoto() {
+    pendingPhotoData = null;
+    document.getElementById('photoImage').style.display = 'none';
+    document.getElementById('photoPlaceholder').style.display = 'block';
+    document.getElementById('confirmCompleteBtn').disabled = true;
+    document.getElementById('confirmCompleteBtn').innerHTML = '📸 需要先拍攝';
+    document.getElementById('photoSection').style.display = 'none';
+    document.getElementById('completeActionBar').style.display = 'flex';
+  }
+
+  function cancelLiveTask() {
+    if (liveTaskAccepted) {
+      const req = liveRequests.find(r => r.id === liveTaskAccepted.id);
+      if (req) { req.status = 'pending'; req.assignedVolunteerId = null; saveToStorage('liveRequests', liveRequests); }
+      liveTaskAccepted = null; saveToStorage('liveTaskAccepted', null);
+      stopGPS();
+    }
+    navTo('screenVolunteerBoard');
+  }
+
+  function resumeTask(id) {
+    const req = liveRequests.find(r => r.id === id);
+    if (req) {
+      liveTaskAccepted = req;
+      saveToStorage('liveTaskAccepted', liveTaskAccepted);
+      showScreen('screenLiveMap');
+    }
+  }
+
+  // ==================== 義工接單大廳 ====================
+  function renderVolunteerBoard() {
+    const container = document.getElementById('volunteerBoardContent');
+    const now = Date.now();
+    // 🔧 按時間倒序：最新的排最頂
+    const allPending = liveRequests.filter(r => r.status === 'pending').sort((a, b) => b.id - a.id);
+    const myActive = liveRequests.filter(r => r.status === 'assigned' && r.assignedVolunteerId === currentUser?.userId).sort((a, b) => b.id - a.id);
+    // 🆕 將 pending 分為緊急 (>30分鐘前) 及 普通
+    const urgentRequests = allPending.filter(r => (now - r.id) > 30 * 60 * 1000);
+    const normalRequests = allPending.filter(r => (now - r.id) <= 30 * 60 * 1000);
+
+    let html = '';
+
+    // 我的進行中任務
+    if (myActive.length) {
+      html += `<div style="font-weight:700;margin-bottom:8px;">🚴 我的進行中任務</div>`;
+      myActive.forEach(req => {
+        html += `<div class="card" style="background:#1a3a2a;border-color:#2ecc71;margin-bottom:10px;cursor:pointer;" data-action="resume" data-id="${req.id}">
+          <div class="flex-row" style="justify-content:space-between;">
+            <span class="npc-badge">🟢 進行中</span>
+            <button class="btn-small btn-green" data-action="map" style="width:auto;">📍 查看地圖</button>
+          </div>
+          <strong>${req.title}</strong>
+          <p style="font-size:12px;color:var(--text-sub);">📍 ${req.locationName} · ${req.requesterName}</p>
+        </div>`;
+      });
+    }
+
+    // 等待中的求助
+    const totalPending = allPending.length;
+    html += `<div style="font-weight:700;margin:12px 0 8px 0;">🆘 附近求助 <span style="color:var(--accent-orange);">(${totalPending})</span></div>`;
+
+    if (!totalPending) {
+      html += `<div style="text-align:center;padding:30px;color:var(--text-sub);">
+        <div style="font-size:48px;margin-bottom:10px;">🎉</div>
+        <p>暫時冇新求助</p>
+        <p style="font-size:12px;">所有街坊都獲得緊幫助！</p>
+      </div>`;
+    } else {
+      // 🆕 緊急求助（>30分鐘未被接）
+      urgentRequests.forEach(req => {
+        const ago = timeSince(req.id);
+        html += `<div class="card" style="background:#4a1a1a;border-color:#ff0000;margin-bottom:10px;">
+          <div class="flex-row" style="justify-content:space-between;margin-bottom:4px;">
+            <span class="badge" style="background:#7f0000;">🔥 緊急 · 已等${ago}</span>
+            <span style="font-size:11px;color:#ff6b6b;">⚠️ 急需幫助</span>
+          </div>
+          <strong>${req.title}</strong>
+          <div style="display:flex;gap:12px;font-size:12px;color:var(--text-sub);margin:4px 0;">
+            <span>📍 ${req.locationName}</span>
+            ${volunteerGPS ? `<span>📏 ${getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) < 1 ? (getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) * 1000).toFixed(0) + 'm' : getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng).toFixed(2) + 'km'}</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">
+            <button class="btn btn-small btn-red" data-action="accept" data-id="${req.id}" style="width:auto;">🚀 優先接單</button>
+          </div>
+        </div>`;
+      });
+      // 普通求助
+      normalRequests.forEach(req => {
+        const ago = timeSince(req.id);
+        const d = volunteerGPS ? getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) : null;
+        const distStr = d ? (d < 1 ? (d * 1000).toFixed(0) + 'm' : d.toFixed(2) + 'km') : '';
+        html += `<div class="card" style="background:#3d2222;border-color:#e74c3c;margin-bottom:10px;">
+          <div class="flex-row" style="justify-content:space-between;margin-bottom:4px;">
+            <span class="badge" style="background:#7f2727;">🚨 即時呼求</span>
+            <span style="font-size:11px;color:var(--text-sub);">${ago}</span>
+          </div>
+          <strong>${req.title}</strong>
+          <div style="display:flex;gap:12px;font-size:12px;color:var(--text-sub);margin:4px 0;">
+            <span>📍 ${req.locationName}</span>
+            ${distStr ? `<span>📏 ${distStr}</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">
+            <button class="btn btn-small btn-red" data-action="accept" data-id="${req.id}" style="width:auto;">🚀 接單</button>
+          </div>
+        </div>`;
+      });
+    }
+
+    container.innerHTML = html;
+    // 🔧 Event delegation：一個 listener 處理所有掣，唔使逐個 onclick
+    container.onclick = function(e) {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = parseInt(btn.dataset.id);
+      if (action === 'accept') acceptLiveRequest(id);
+      else if (action === 'resume') resumeTask(id);
+      else if (action === 'map') showScreen('screenLiveMap');
+    };
+  }
+
+  // ==================== 討論區 ====================
+  function switchForumBoard(board) {
+    currentForumBoard = board;
+    document.querySelectorAll('#forumTabs .tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    forumPage[currentForumBoard] = 0;
+    renderForumPosts();
+  }
+
+  function renderForumPosts() {
+    const boardPosts = posts[currentForumBoard] || [];
+    const page = forumPage[currentForumBoard] || 0;
+    const visible = boardPosts.slice(0, (page+1)*POSTS_PER_PAGE);
+    const container = document.getElementById('postListContainer');
+    container.innerHTML = visible.map(post => {
+      const liked = post.liked && currentUser && post.liked.includes(currentUser.userId);
+      return `<div class="post-card" onclick="openPostDetail(${post.id})">
+        <div style="display:flex; justify-content:space-between;"><span class="anon-name">👤 ${post.anon}</span><button onclick="event.stopPropagation(); likePost(${post.id})" style="background:none;border:none;cursor:pointer;color:${liked?'var(--accent-orange)':'#777'};">❤️ ${post.likes||0}</button></div>
+        <strong>${post.title}</strong>
+        <p style="font-size:13px;color:var(--text-sub);">${post.content.length > 50 ? post.content.substring(0,50)+'...' : post.content}</p>
+      </div>`;
+    }).join('');
+    if (boardPosts.length > visible.length) {
+      container.innerHTML += `<button class="load-more" onclick="loadMorePosts()">載入更多貼文</button>`;
+    }
+  }
+
+  function loadMorePosts() {
+    forumPage[currentForumBoard] = (forumPage[currentForumBoard] || 0) + 1;
+    renderForumPosts();
+  }
+
+  function openNewPostForm() { document.getElementById('newPostForm').style.display = 'block'; }
+  function submitPost() {
+    const title = document.getElementById('newPostTitle').value.trim();
+    const content = document.getElementById('newPostContent').value.trim();
+    if (!title || !content) { showToast("請輸入內容", 'error'); return; }
+    const newPost = { id: Date.now(), title, content, anon: '熱心街坊_' + Math.floor(100+Math.random()*900), likes: 0, liked: [] };
+    if (!posts[currentForumBoard]) posts[currentForumBoard] = [];
+    posts[currentForumBoard].push(newPost);
+    saveToStorage('posts', posts);
+    document.getElementById('newPostTitle').value = '';
+    document.getElementById('newPostContent').value = '';
+    document.getElementById('newPostForm').style.display = 'none';
+    renderForumPosts();
+  }
+
+  function likePost(id) {
+    if (!currentUser) { showToast("請先登入", 'error'); return; }
+    const list = posts[currentForumBoard] || [];
+    const post = list.find(p => p.id === id);
+    if (!post) return;
+    if (!post.liked) post.liked = [];
+    const idx = post.liked.indexOf(currentUser.userId);
+    if (idx === -1) { post.liked.push(currentUser.userId); post.likes = (post.likes||0)+1; }
+    else { post.liked.splice(idx,1); post.likes = Math.max(0, (post.likes||0)-1); }
+    saveToStorage('posts', posts);
+    renderForumPosts();
+  }
+
+  function openPostDetail(id) {
+    const boardPosts = posts[currentForumBoard] || [];
+    const post = boardPosts.find(p => p.id === id);
+    if (!post) return;
+    const liked = post.liked && currentUser && post.liked.includes(currentUser.userId);
+    document.getElementById('postDetailContent').innerHTML = `
+      <div class="card">
+        <div class="flex-row" style="justify-content:space-between; margin-bottom:8px;">
+          <span class="anon-name">👤 ${post.anon}</span>
+          <button onclick="likePostFromDetail(${post.id})" style="background:none;border:none;cursor:pointer;color:${liked?'var(--accent-orange)':'#777'};">❤️ ${post.likes||0}</button>
+        </div>
+        <h3>${post.title}</h3>
+        <p style="margin-top:10px; line-height:1.6;">${post.content}</p>
+      </div>
+    `;
+    showScreen('screenPostDetail');
+  }
+
+  function likePostFromDetail(id) {
+    likePost(id);
+    const boardPosts = posts[currentForumBoard] || [];
+    const post = boardPosts.find(p => p.id === id);
+    if (post) openPostDetail(id);
+  }
+
+  function backToForum() { navTo('screenForum'); }
+
+  function showWeatherDetail() {
+    showScreen('screenWeatherDetail');
+    updateWeatherDetailScreen();
+    if (!weatherCache) fetchRealWeather();
+  }
+  function showTrafficDetail() {
+    showScreen('screenTrafficDetail');
+    updateTrafficUI();
+  }
+
+  // ==================== NGO 後台 ====================
+  function switchNgoTab(tab) {
+    document.getElementById('ngoTabTasks').className = tab === 'tasks' ? 'tab active' : 'tab';
+    document.getElementById('ngoTabKyc').className = tab === 'kyc' ? 'tab active' : 'tab';
+    document.getElementById('ngoTabMonitor').className = tab === 'monitor' ? 'tab active' : 'tab';
+    document.getElementById('ngoTasksSection').style.display = tab === 'tasks' ? 'flex' : 'none';
+    document.getElementById('ngoKycSection').style.display = tab === 'kyc' ? 'flex' : 'none';
+    document.getElementById('ngoMonitorSection').style.display = tab === 'monitor' ? 'flex' : 'none';
+    if (tab === 'kyc') renderKycList();
+    if (tab === 'monitor') renderMonitorDashboard();
+  }
+
+  function updateNgoDashboardData() {
+    document.getElementById('statPending').innerText = liveRequests.filter(r => r.status === 'pending').length;
+    document.getElementById('statActive').innerText = liveRequests.filter(r => r.status === 'assigned').length;
+    document.getElementById('statDone').innerText = liveRequests.filter(r => r.status === 'completed').length;
+  }
+
+  function renderNgoTasks() {
+    document.getElementById('ngoTaskList').innerHTML = tasks.map(t => `<div class="card"><strong>${t.title}</strong><p style="font-size:12px;">名額: ${t.quota} | 報名: ${t.enrolled?t.enrolled.length:0}</p></div>`).join('');
+  }
+
+  function openNewTaskForm() { document.getElementById('newTaskForm').style.display = 'block'; }
+  function addNgoTask() {
+    const title = document.getElementById('newTaskTitle').value.trim();
+    const date = document.getElementById('newTaskDate').value;
+    const time = document.getElementById('newTaskTime').value;
+    const quota = parseInt(document.getElementById('newTaskQuota').value) || 2;
+    const loc = document.getElementById('newTaskLocation').value.trim();
+    if (!title) return showToast("請輸入任務名稱", 'error');
+    tasks.push({ id: Date.now(), ngo: '沙田長者鄰舍中心', title, date, time, location: loc, quota, enrolled: [], completed: [], icon: '📌', description: '', signIns: {} });
+    saveToStorage('tasks', tasks);
+    document.getElementById('newTaskForm').style.display = 'none';
+    renderNgoTasks();
+  }
+
+  function openLiveRequestForm() { document.getElementById('liveRequestForm').style.display = 'block'; }
+  function publishLiveRequest() {
+    const title = document.getElementById('liveReqTitle').value.trim();
+    const coordsStr = document.getElementById('liveReqLocation').value;
+    if (!title) return;
+    const [lat, lng] = coordsStr.split(',').map(Number);
+    liveRequests.push({ id: Date.now(), ngo: '長者呼救', title, locationName: shatinLocations[coordsStr] || '沙田區', lat, lng, requesterName: '沙田獨居長者', status: 'pending', requesterUserId: 'u1' });
+    saveToStorage('liveRequests', liveRequests);
+    document.getElementById('liveRequestForm').style.display = 'none';
+    updateNgoDashboardData();
+    showToast("即時需求已廣播！", 'success');
+  }
+
+  // ==================== AI 語音求助 ====================
+  // 沙田區常見地點 → 經緯度對照
+  const SHATIN_LOCATIONS = {
+    '禾輋邨': '22.382,114.189',
+    '瀝源邨': '22.382,114.193',
+    '沙田市中心': '22.382,114.189',
+    '沙田圍': '22.373,114.195',
+    '沙田': '22.382,114.189',
+    '新城市廣場': '22.382,114.188',
+    '火炭': '22.399,114.191',
+    '馬鞍山': '22.425,114.228',
+    '大圍': '22.376,114.178',
+    '石門': '22.388,114.209',
+    '第一城': '22.387,114.203',
+    '顯徑': '22.365,114.173',
+    '大水坑': '22.414,114.224',
+    '烏溪沙': '22.432,114.240',
+    '恆安': '22.415,114.222',
+    '博康': '22.376,114.190',
+    '車公廟': '22.379,114.185',
+    '沙田公園': '22.381,114.189',
+    '沙田大會堂': '22.381,114.187',
+    '沙田圖書館': '22.380,114.187',
+    '沙田醫院': '22.383,114.175',
+    '威爾斯親王醫院': '22.378,114.193',
+    '秦石': '22.379,114.185',
+    '新田圍': '22.365,114.181',
+    '美林': '22.370,114.176',
+    '沙田頭': '22.370,114.015',
+  };
+
+  function findLocationCoords(locationName) {
+    // Try exact match first
+    if (SHATIN_LOCATIONS[locationName]) {
+      return SHATIN_LOCATIONS[locationName];
+    }
+    // Try partial match: check if locationName contains any key
+    for (const [key, coords] of Object.entries(SHATIN_LOCATIONS)) {
+      if (locationName.includes(key) || key.includes(locationName)) {
+        return coords;
+      }
+    }
+    // Default to Sha Tin centre
+    return '22.382,114.189';
+  }
+
+  function publishHelpFromAI(title, locationName) {
+    // Map location name to coordinates
+    const coordsStr = findLocationCoords(locationName);
+    const [lat, lng] = coordsStr.split(',').map(Number);
+
+    const newRequest = {
+      id: Date.now(),
+      ngo: '長者呼救',
+      title: title,
+      locationName: SHATIN_LOCATIONS[coordsStr] || locationName || '沙田區',
+      lat, lng,
+      requesterName: currentUser ? currentUser.name : '沙田街坊',
+      status: 'pending',
+      requesterUserId: currentUser ? currentUser.userId : 'anonymous',
+    };
+    liveRequests.push(newRequest);
+    saveToStorage('liveRequests', liveRequests);
+
+    // 顯示成功通知
+    const notif = document.createElement('div');
+    notif.style.cssText = 'position:fixed;bottom:100px;left:16px;right:16px;background:#2ecc71;color:white;padding:16px 20px;border-radius:20px;font-weight:700;text-align:center;z-index:999;box-shadow:0 6px 20px rgba(46,204,113,0.4);animation:fadeInUp 0.3s ease;';
+    notif.innerHTML = `✅ 求助已發布！<br><span style="font-size:13px;font-weight:400;">${title} · ${locationName}</span>`;
+    document.getElementById('appContainer').appendChild(notif);
+    setTimeout(() => { notif.style.opacity = '0'; notif.style.transition = 'opacity 0.5s'; setTimeout(() => notif.remove(), 500); }, 4000);
+
+    // 如果主頁面顯示中，更新即時求助列表
+    if (document.getElementById('screenTaskList').classList.contains('active')) {
+      renderLiveRequests();
+    }
+    // 如果 NGO dashboard 顯示中，更新統計
+    if (document.getElementById('screenNgoDashboard').classList.contains('active')) {
+      updateNgoDashboardData();
+    }
+  }
+
+  // ==================== 實時監控中心 ====================
+  function renderMonitorDashboard() {
+    const now = Date.now();
+    const pending = liveRequests.filter(r => r.status === 'pending');
+    const active = liveRequests.filter(r => r.status === 'assigned');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const doneToday = liveRequests.filter(r => r.status === 'completed' && timeSince(r.id).includes('分鐘') && (now - r.id) < 86400000);
+
+    document.getElementById('monPending').innerText = pending.length;
+    document.getElementById('monActive').innerText = active.length;
+    document.getElementById('monDone').innerText = doneToday.length;
+    document.getElementById('monCitizens').innerText = usersList.filter(u => u.role === 'citizen').length;
+
+    const allRequests = [...liveRequests].sort((a, b) => b.id - a.id);
+    const timeline = document.getElementById('monitorTimeline');
+
+    if (!allRequests.length) {
+      timeline.innerHTML = '<div style="color:var(--text-sub);text-align:center;padding:12px;">📋 未有求助紀錄</div>';
+      return;
+    }
+
+    timeline.innerHTML = allRequests.map(r => {
+      const age = timeSince(r.id);
+      const statusColors = { pending: '#ff6b35', assigned: '#5d78ff', completed: '#2ecc71' };
+      const statusLabels = { pending: '🟡 等待', assigned: '🔵 進行中', completed: '🟢 完成' };
+      const color = statusColors[r.status] || '#666';
+      const label = statusLabels[r.status] || r.status;
+      const assignedTo = r.assignedVolunteerId ? usersList.find(u => u.userId === r.assignedVolunteerId) : null;
+      return `
+        <div style="border-left:3px solid ${color};padding:4px 8px;background:var(--bg-card);border-radius:0 8px 8px 0;">
+          <div class="flex-row" style="justify-content:space-between;">
+            <span style="color:${color};font-weight:600;">${label}</span>
+            <span style="font-size:11px;color:var(--text-sub);">${age}</span>
+          </div>
+          <div style="font-size:13px;">${r.title}</div>
+          <div style="font-size:11px;color:var(--text-sub);">
+            📍 ${r.locationName} · 👤 ${r.requesterName}
+            ${assignedTo ? ` · 🚴 ${assignedTo.name}` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    updateNgoDashboardData();
+  }
+
+  function renderKycList() {
+    const container = document.getElementById('kycListContainer');
+    // 統一市民制後無需義工審核，顯示已註冊市民列表
+    const citizens = usersList.filter(u => u.role === 'citizen');
+    container.innerHTML = `<strong style="color:var(--accent-green);">👥 已註冊沙田友市民 (${citizens.length})</strong>` +
+      (citizens.length ? citizens.map(v => `<div class="card flex-row" style="justify-content:space-between;"><div><strong>${v.name}</strong><p style="font-size:12px;color:var(--text-sub);">${v.phone}</p></div><span class="npc-badge">已認證</span></div>`).join('') : '<p>暫無</p>');
+  }
+
+  // ==================== AI 聊天 ====================
+  function openAiChat() { document.getElementById('aiChatOverlay').classList.add('active'); renderAiMessages(); }
+  function closeAiChat() { document.getElementById('aiChatOverlay').classList.remove('active'); }
+
+  // 快速求助按鈕：填入訊息並發送
+  function quickHelp(helpType) {
+    const input = document.getElementById('aiChatInput');
+    input.value = `我喺沙田需要幫手，${helpType}，有冇街坊可以幫我？`;
+    sendAiMessage();
+  }
+
+  function renderAiMessages() {
+    const container = document.getElementById('aiChatMessages');
+    container.innerHTML = chatHistory.map(m => `<div class="ai-msg ${m.sender}">${m.text.replace(/\n/g,'<br>')}</div>`).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendAiMessage() {
+    const input = document.getElementById('aiChatInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+    chatHistory.push({ text: txt, sender: 'user' });
+    input.value = '';
+    renderAiMessages();
+
+    // 🔍 前端關鍵字偵測：如果街坊需要幫助，直接觸發求助（唔使靠 AI）
+    const helpKeywords = ['幫手', '求助', '需要幫', '幫我', '買餸', '跌親', '拎藥', '唔舒服', '搬嘢', '幫吓', '幫下', '可唔可以幫'];
+    const needsHelp = helpKeywords.some(kw => txt.includes(kw));
+    if (needsHelp) {
+      // 嘗試從訊息中搵出地點
+      let helpLocation = '沙田';
+      for (const loc of Object.keys(SHATIN_LOCATIONS)) {
+        if (txt.includes(loc)) { helpLocation = loc; break; }
+      }
+      // 用訊息頭幾個字做標題
+      let helpTitle = txt.length > 30 ? txt.substring(0, 30) + '...' : txt;
+      helpTitle = helpTitle.replace(/[，。！？,\.!?]/g, ' ').trim();
+      // 發佈求助（唔使等 AI 回應）
+      publishHelpFromAI(helpTitle, helpLocation);
+    }
+
+    // Show loading indicator
+    chatHistory.push({ text: '🤔 等我諗下...', sender: 'bot' });
+    renderAiMessages();
+    // Call AI backend (local proxy or Cloudflare Worker)
+    fetch(AI_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: txt, history: chatHistory.slice(0, -1) })
+    })
+    .then(r => r.json())
+    .then(data => {
+      // Remove loading bubble
+      chatHistory.pop();
+      const reply = data.reply || '唔好意思，我答唔到你呢個問題。';
+      chatHistory.push({ text: reply, sender: 'bot' });
+      renderAiMessages();
+      speakText(reply);
+    })
+    .catch(err => {
+      chatHistory.pop();
+      const fallback = '⚠️ AI 暫時離線，請確認 proxy 已啟動（python ai_proxy.py）';
+      chatHistory.push({ text: fallback, sender: 'bot' });
+      renderAiMessages();
+      speakText('AI 暫時離線');
+    });
+  }
+
+  // ==================== 真實天氣數據 (香港天文台 HKO) ====================
+  const HKO_RHRREAD = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc';
+  const HKO_FND = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc';
+
+  let weatherCache = null;
+  let forecastCache = null;
+  let weatherFetching = false;
+  let forecastFetching = false;
+
+  function weatherEmojiFromIcon(icon) {
+    if (!icon) return '⛅';
+    if (icon >= 50 && icon <= 59) return '☀️';
+    if (icon >= 60 && icon <= 69) return '⛅';
+    if (icon >= 70 && icon <= 79) return '☁️';
+    if (icon >= 80 && icon <= 89) return '🌧️';
+    if (icon >= 90 && icon <= 99) return '⛈️';
+    return '⛅';
+  }
+  function weatherEmoji(desc) {
+    if (!desc) return '⛅';
+    if (desc.includes('雷') || (desc.includes('雨') && desc.includes('暴'))) return '⛈️';
+    if (desc.includes('雨') || desc.includes('驟')) return '🌧️';
+    if (desc.includes('晴') && desc.includes('多雲')) return '⛅';
+    if (desc.includes('晴') || desc.includes('天晴')) return '☀️';
+    if (desc.includes('多雲') || desc.includes('雲') || desc.includes('陰')) return '☁️';
+    if (desc.includes('霧')) return '🌫️';
+    return '⛅';
+  }
+
+  async function fetchRealWeather() {
+    if (weatherFetching) return;
+    weatherFetching = true;
+    try {
+      const res = await fetch(HKO_RHRREAD);
+      const data = await res.json();
+      weatherCache = data;
+
+      const shaTinTemp = data.temperature?.data?.find(t => t.place === '沙田');
+      const temp = shaTinTemp ? shaTinTemp.value : null;
+      const shaTinHumidity = data.humidity?.data?.find(h => h.place === '沙田');
+      const humidity = shaTinHumidity ? shaTinHumidity.value : (data.humidity?.data?.[0]?.value ?? '--');
+      const weatherDesc = data.weather || '多雲';
+      const emoji = data.icon ? weatherEmojiFromIcon(data.icon) : weatherEmoji(weatherDesc);
+      const tempStr = temp !== null ? `${temp}°C` : '--°C';
+      const humidityStr = `${humidity}%`;
+
+      const card = document.getElementById('weatherCard');
+      if (card) {
+        card.innerHTML = `
+          <div style="font-size:28px;" onclick="showWeatherDetail()">${emoji}</div>
+          <div onclick="showWeatherDetail()">
+            <strong>沙田區 即時天氣</strong>
+            <div style="font-size:13px; color:var(--text-sub);">${weatherDesc} · ${tempStr} · 濕度 ${humidityStr}</div>
+            <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">資料來源：香港天文台</div>
+          </div>
+        `;
+      }
+      window._weatherCache = { temp: tempStr, humidity: humidityStr, desc: weatherDesc, emoji };
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+      fetchRealForecast();
+    } catch (e) {
+      console.warn('天氣讀取失敗', e);
+      window._weatherCache = { temp: '--°C', humidity: '--%', desc: '未能獲取', emoji: '⛅' };
+    } finally { weatherFetching = false; }
+  }
+
+  async function fetchRealForecast() {
+    if (forecastFetching) return;
+    forecastFetching = true;
+    try {
+      const res = await fetch(HKO_FND);
+      forecastCache = await res.json();
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+    } catch (e) { console.warn('預報讀取失敗', e); }
+    finally { forecastFetching = false; }
+  }
+
+  function getDayName(offset) {
+    const names = ['週日','週一','週二','週三','週四','週五','週六'];
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return names[d.getDay()];
+  }
+  function getTodayStr() {
+    const d = new Date();
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+  }
+
+  function updateWeatherDetailScreen() {
+    const summary = document.getElementById('weatherDetailSummary');
+    const content = document.getElementById('weatherDetailContent');
+    if (!summary || !content) return;
+
+    if (weatherCache) {
+      const st = weatherCache.temperature?.data?.find(t => t.place === '沙田');
+      const t = st ? st.value : null;
+      const sh = weatherCache.humidity?.data?.find(h => h.place === '沙田');
+      const h = sh ? sh.value : (weatherCache.humidity?.data?.[0]?.value ?? '--');
+      const emoji = weatherCache.icon ? weatherEmojiFromIcon(weatherCache.icon) : weatherEmoji(weatherCache.weather);
+      summary.innerHTML = `
+        <div><strong>${emoji} 今日 (${getTodayStr()})</strong></div>
+        <div style="color:var(--accent-orange);">${t !== null ? t+'°C' : '--'} / ${h}%</div>
+      `;
+    }
+
+    if (forecastCache && forecastCache.weatherForecast) {
+      const fc = forecastCache.weatherForecast;
+      const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      content.innerHTML = fc.slice(0, 9).map((f, i) => {
+        const fDate = f.forecastDate || '';
+        let label;
+        if (fDate === todayStr) label = '今日';
+        else {
+          const nextDay = new Date(); nextDay.setDate(nextDay.getDate()+1);
+          const tomorrowStr = nextDay.toISOString().slice(0,10).replace(/-/g,'');
+          label = fDate === tomorrowStr ? '明日' : (f.week || getDayName(i));
+        }
+        const desc = f.forecastWeather || '--';
+        const em = weatherEmoji(desc);
+        const hi = f.forecastMaxtemp?.value ?? '--';
+        const lo = f.forecastMintemp?.value ?? '--';
+        return `<div class="flex-row" style="justify-content:space-between;padding:6px 0;border-bottom:${i<8?'1px solid var(--border-color)':'none'}">
+          <span style="min-width:48px;font-weight:600;">${label}</span>
+          <span>${em} ${desc}</span>
+          <span>${lo}~${hi}°C</span>
+        </div>`;
+      }).join('');
+    } else if (weatherCache) {
+      content.innerHTML = `<div style="text-align:center;color:var(--text-sub);padding:12px;"><p>🌤️ 已獲取即時天氣</p><p style="font-size:12px;margin-top:6px;">9天預報載入中...</p><div class="loader" style="margin-top:8px;"></div></div>`;
+      if (!forecastFetching) fetchRealForecast();
+    }
+  }
+
+  // ==================== 即時交通 (時段估算模型) ====================
+  function getTrafficStatus(road) {
+    const now = new Date();
+    const h = now.getHours(), d = now.getDay();
+    const wk = d === 0 || d === 6;
+    const rush = (h >= 7 && h <= 9) || (h >= 17 && h <= 19);
+    const night = h <= 6 || h >= 22;
+    const tbl = {
+      '大埔公路沙田段': { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '沙田路':           { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '獅子山隧道公路':   { wd: { r:'擠塞',    o:'行車緩慢',n:'暢順' }, we: { r:'行車緩慢',o:'暢順',n:'暢順' } },
+      '城門隧道公路':     { wd: { r:'多車',    o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } }
+    };
+    const p = tbl[road] || tbl['大埔公路沙田段'];
+    const s = wk ? (rush ? p.we.r : (night ? p.we.n : p.we.o)) : (rush ? p.wd.r : (night ? p.wd.n : p.wd.o));
+    let c = '#2ecc71';
+    if (s.includes('擠塞')) c = '#e74c3c'; else if (s.includes('緩慢') || s.includes('多車')) c = '#f1c40f';
+    return { text: s, color: c };
+  }
+
+  function updateTrafficUI() {
+    const roads = ['大埔公路沙田段','沙田路','獅子山隧道公路','城門隧道公路'];
+    const s = roads.map(r => getTrafficStatus(r));
+    const card = document.getElementById('trafficCard');
+    if (card) {
+      card.innerHTML = `
+        <div style="font-size:24px;" onclick="showTrafficDetail()">🚦</div>
+        <div style="flex:1;" onclick="showTrafficDetail()">
+          <strong>城門河畔即時交通</strong>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;display:flex;gap:8px;">
+            <span><span class="traffic-status" style="background:${s[0].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>大埔公路 ${s[0].text}</span>
+            <span><span class="traffic-status" style="background:${s[1].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>沙田路 ${s[1].text}</span>
+            <span><span class="traffic-status" style="background:${s[2].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>獅隧 ${s[2].text.replace('公路','')}</span>
+          </div>
+          <div style="font-size:11px;color:var(--accent-blue);margin-top:2px;">基於時段估算（非實時感應器數據）</div>
+        </div>
+      `;
+    }
+    const dc = document.getElementById('trafficDetailContent');
+    if (dc) {
+      const now = new Date();
+      const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      dc.innerHTML = roads.map((r,i) => `
+        <div style="${i>0?'margin-top:10px;':''}display:flex;justify-content:space-between;align-items:center;">
+          <strong>${r}</strong>
+          <span style="color:${s[i].color};font-weight:600;">${s[i].text}</span>
+        </div>
+      `).join('') + `<hr><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);"><span>🕐 ${ts}</span><span>📊 根據時段估算</span></div>`;
+    }
+    window._trafficCache = s.map((x,i) => ({ road: roads[i], text: x.text })).filter(x => x.text.includes('擠塞') || x.text.includes('緩慢'));
+  }
+
+  window.onload = () => {
+    updateModeUI();
+    initSpeechRecognition();
+    fetchRealWeather();
+    updateTrafficUI();
+    startGPS();
+    dataCleanup();
+    // 🔧 註冊 PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(() => console.log('PWA SW registered'))
+        .catch(() => {}); // 靜默失敗，唔影響 app
+    }
+    setInterval(() => { updateTrafficUI(); }, 300000);
+    setInterval(() => { fetchRealWeather(); }, 600000);
+  };
+</script>
+</body>
+</html>
