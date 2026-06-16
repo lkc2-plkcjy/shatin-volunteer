@@ -300,25 +300,25 @@
     </div>
     <div id="kycAwaitingAlert" class="status-alert" style="display:none;"><span>⚠️</span><div><strong>等待 NGO 認證中</strong><p style="font-size:12px; margin-top:2px;">為確保社區長者安全，您的義工身份正在進行 KYC 審核。核准後方可接單。</p></div></div>
     
-    <div class="info-card" onclick="showWeatherDetail()">
+    <div class="info-card" id="weatherCard" onclick="showWeatherDetail()">
       <div style="font-size:28px;">⛅</div>
       <div>
         <strong>沙田區 即時天氣</strong>
-        <div style="font-size:13px; color:var(--text-sub);">多雲短暫晴天 · 28°C · 濕度 74%</div>
-        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">點擊查看逐小時預報 →</div>
+        <div style="font-size:13px; color:var(--text-sub);"><span class="loader"></span>載入中...</div>
+        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">資料來源：香港天文台</div>
       </div>
     </div>
 
-    <div class="info-card" onclick="showTrafficDetail()">
+    <div class="info-card" id="trafficCard" onclick="showTrafficDetail()">
       <div style="font-size:24px;">🚦</div>
       <div style="flex:1;">
         <strong>城門河畔即時交通</strong>
         <div style="font-size:12px; color:var(--text-sub); margin-top:2px; display:flex; gap:8px;">
-          <span><span class="traffic-status traffic-green"></span>大埔公路 順暢</span>
-          <span><span class="traffic-status traffic-yellow"></span>沙田路 緩慢</span>
-          <span><span class="traffic-status traffic-red"></span>獅隧 擠塞</span>
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
+          <span><span class="traffic-status" style="background:#666;"></span>載入中</span>
         </div>
-        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">點擊查看道路詳情 →</div>
+        <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">基於時段估算</div>
       </div>
     </div>
 
@@ -335,18 +335,18 @@
       <button onclick="showScreen('screenTaskList')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回</button>
       <span style="font-weight:700;">🌤️ 沙田逐小時天氣</span>
     </div>
-    <div class="card">
-      <div style="display:flex; justify-content:space-between;">
-        <div><strong>今日 (6月15日)</strong></div>
-        <div style="color:var(--accent-orange);">28°C / 74%</div>
+    <div class="card" id="weatherDetailCard">
+      <div id="weatherDetailSummary" style="display:flex;justify-content:space-between;">
+        <div><strong>載入中...</strong></div>
+        <div style="color:var(--accent-orange);">--</div>
       </div>
-      <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-        <div class="flex-row" style="justify-content:space-between;"><span>14:00</span><span>⛅ 多雲</span><span>29°C</span></div>
-        <div class="flex-row" style="justify-content:space-between;"><span>15:00</span><span>🌤️ 短暫晴天</span><span>30°C</span></div>
-        <div class="flex-row" style="justify-content:space-between;"><span>16:00</span><span>⛅ 多雲</span><span>28°C</span></div>
-        <div class="flex-row" style="justify-content:space-between;"><span>17:00</span><span>🌧️ 驟雨</span><span>26°C</span></div>
-        <div class="flex-row" style="justify-content:space-between;"><span>18:00</span><span>🌧️ 驟雨</span><span>25°C</span></div>
+      <div id="weatherDetailContent" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+        <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:12px;">
+          <div class="loader"></div><span>從香港天文台獲取數據...</span>
+        </div>
       </div>
+      <hr>
+      <div style="font-size:11px;color:var(--text-sub);text-align:center;">資料來源：香港天文台開放數據</div>
     </div>
   </div>
 
@@ -356,11 +356,12 @@
       <button onclick="showScreen('screenTaskList')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">← 返回</button>
       <span style="font-weight:700;">🚦 沙田主要道路即時狀態</span>
     </div>
-    <div class="card">
-      <div><strong>大埔公路沙田段</strong><span style="float:right; color:#2ecc71;">暢順</span></div>
-      <div style="margin-top:8px;"><strong>沙田路</strong><span style="float:right; color:#f1c40f;">行車緩慢</span></div>
-      <div style="margin-top:8px;"><strong>獅子山隧道公路</strong><span style="float:right; color:#e74c3c;">擠塞</span></div>
-      <div style="margin-top:8px;"><strong>城門隧道公路</strong><span style="float:right; color:#f1c40f;">多車</span></div>
+    <div class="card" id="trafficDetailCard">
+      <div id="trafficDetailContent">
+        <div class="flex-row" style="justify-content:center;color:var(--text-sub);padding:12px;">
+          <div class="loader"></div><span>載入中...</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1098,8 +1099,15 @@
 
   function backToForum() { navTo('screenForum'); }
 
-  function showWeatherDetail() { showScreen('screenWeatherDetail'); }
-  function showTrafficDetail() { showScreen('screenTrafficDetail'); }
+  function showWeatherDetail() {
+    showScreen('screenWeatherDetail');
+    updateWeatherDetailScreen();
+    if (!weatherCache) fetchRealWeather();
+  }
+  function showTrafficDetail() {
+    showScreen('screenTrafficDetail');
+    updateTrafficUI();
+  }
 
   // ==================== NGO 後台 ====================
   function switchNgoTab(tab) {
@@ -1179,19 +1187,224 @@
     chatHistory.push({ text: txt, sender: 'user' });
     input.value = '';
     renderAiMessages();
-    setTimeout(() => {
-      let response = "唔好意思，我未太聽得明你嘅指示...";
-      if (txt.includes('活動')) response = `目前有 ${tasks.length} 個義工活動可供報名。`;
-      else if (txt.includes('交通')) response = "大埔公路順暢，獅隧塞車。";
-      chatHistory.push({ text: response, sender: 'bot' });
+    // Show loading indicator
+    chatHistory.push({ text: '🤔 等我諗下...', sender: 'bot' });
+    renderAiMessages();
+    // Call the local proxy (no API key exposed in browser!)
+    fetch('http://127.0.0.1:5003/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: txt, history: chatHistory.slice(0, -1) })
+    })
+    .then(r => r.json())
+    .then(data => {
+      // Remove loading bubble
+      chatHistory.pop();
+      const reply = data.reply || '唔好意思，我答唔到你呢個問題。';
+      chatHistory.push({ text: reply, sender: 'bot' });
       renderAiMessages();
-      speakText(response);
-    }, 800);
+      speakText(reply);
+    })
+    .catch(err => {
+      chatHistory.pop();
+      const fallback = '⚠️ AI 暫時離線，請確認 proxy 已啟動（python ai_proxy.py）';
+      chatHistory.push({ text: fallback, sender: 'bot' });
+      renderAiMessages();
+      speakText('AI 暫時離線');
+    });
+  }
+
+  // ==================== 真實天氣數據 (香港天文台 HKO) ====================
+  const HKO_RHRREAD = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc';
+  const HKO_FND = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc';
+
+  let weatherCache = null;
+  let forecastCache = null;
+  let weatherFetching = false;
+  let forecastFetching = false;
+
+  function weatherEmojiFromIcon(icon) {
+    if (!icon) return '⛅';
+    if (icon >= 50 && icon <= 59) return '☀️';
+    if (icon >= 60 && icon <= 69) return '⛅';
+    if (icon >= 70 && icon <= 79) return '☁️';
+    if (icon >= 80 && icon <= 89) return '🌧️';
+    if (icon >= 90 && icon <= 99) return '⛈️';
+    return '⛅';
+  }
+  function weatherEmoji(desc) {
+    if (!desc) return '⛅';
+    if (desc.includes('雷') || (desc.includes('雨') && desc.includes('暴'))) return '⛈️';
+    if (desc.includes('雨') || desc.includes('驟')) return '🌧️';
+    if (desc.includes('晴') && desc.includes('多雲')) return '⛅';
+    if (desc.includes('晴') || desc.includes('天晴')) return '☀️';
+    if (desc.includes('多雲') || desc.includes('雲') || desc.includes('陰')) return '☁️';
+    if (desc.includes('霧')) return '🌫️';
+    return '⛅';
+  }
+
+  async function fetchRealWeather() {
+    if (weatherFetching) return;
+    weatherFetching = true;
+    try {
+      const res = await fetch(HKO_RHRREAD);
+      const data = await res.json();
+      weatherCache = data;
+
+      const shaTinTemp = data.temperature?.data?.find(t => t.place === '沙田');
+      const temp = shaTinTemp ? shaTinTemp.value : null;
+      const shaTinHumidity = data.humidity?.data?.find(h => h.place === '沙田');
+      const humidity = shaTinHumidity ? shaTinHumidity.value : (data.humidity?.data?.[0]?.value ?? '--');
+      const weatherDesc = data.weather || '多雲';
+      const emoji = data.icon ? weatherEmojiFromIcon(data.icon) : weatherEmoji(weatherDesc);
+      const tempStr = temp !== null ? `${temp}°C` : '--°C';
+      const humidityStr = `${humidity}%`;
+
+      const card = document.getElementById('weatherCard');
+      if (card) {
+        card.innerHTML = `
+          <div style="font-size:28px;" onclick="showWeatherDetail()">${emoji}</div>
+          <div onclick="showWeatherDetail()">
+            <strong>沙田區 即時天氣</strong>
+            <div style="font-size:13px; color:var(--text-sub);">${weatherDesc} · ${tempStr} · 濕度 ${humidityStr}</div>
+            <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">資料來源：香港天文台</div>
+          </div>
+        `;
+      }
+      window._weatherCache = { temp: tempStr, humidity: humidityStr, desc: weatherDesc, emoji };
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+      fetchRealForecast();
+    } catch (e) {
+      console.warn('天氣讀取失敗', e);
+      window._weatherCache = { temp: '--°C', humidity: '--%', desc: '未能獲取', emoji: '⛅' };
+    } finally { weatherFetching = false; }
+  }
+
+  async function fetchRealForecast() {
+    if (forecastFetching) return;
+    forecastFetching = true;
+    try {
+      const res = await fetch(HKO_FND);
+      forecastCache = await res.json();
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+    } catch (e) { console.warn('預報讀取失敗', e); }
+    finally { forecastFetching = false; }
+  }
+
+  function getDayName(offset) {
+    const names = ['週日','週一','週二','週三','週四','週五','週六'];
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return names[d.getDay()];
+  }
+  function getTodayStr() {
+    const d = new Date();
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+  }
+
+  function updateWeatherDetailScreen() {
+    const summary = document.getElementById('weatherDetailSummary');
+    const content = document.getElementById('weatherDetailContent');
+    if (!summary || !content) return;
+
+    if (weatherCache) {
+      const st = weatherCache.temperature?.data?.find(t => t.place === '沙田');
+      const t = st ? st.value : null;
+      const sh = weatherCache.humidity?.data?.find(h => h.place === '沙田');
+      const h = sh ? sh.value : (weatherCache.humidity?.data?.[0]?.value ?? '--');
+      const emoji = weatherCache.icon ? weatherEmojiFromIcon(weatherCache.icon) : weatherEmoji(weatherCache.weather);
+      summary.innerHTML = `
+        <div><strong>${emoji} 今日 (${getTodayStr()})</strong></div>
+        <div style="color:var(--accent-orange);">${t !== null ? t+'°C' : '--'} / ${h}%</div>
+      `;
+    }
+
+    if (forecastCache && forecastCache.weatherForecast) {
+      const fc = forecastCache.weatherForecast;
+      const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      content.innerHTML = fc.slice(0, 9).map((f, i) => {
+        const fDate = f.forecastDate || '';
+        let label;
+        if (fDate === todayStr) label = '今日';
+        else {
+          const nextDay = new Date(); nextDay.setDate(nextDay.getDate()+1);
+          const tomorrowStr = nextDay.toISOString().slice(0,10).replace(/-/g,'');
+          label = fDate === tomorrowStr ? '明日' : (f.week || getDayName(i));
+        }
+        const desc = f.forecastWeather || '--';
+        const em = weatherEmoji(desc);
+        const hi = f.forecastMaxtemp?.value ?? '--';
+        const lo = f.forecastMintemp?.value ?? '--';
+        return `<div class="flex-row" style="justify-content:space-between;padding:6px 0;border-bottom:${i<8?'1px solid var(--border-color)':'none'}">
+          <span style="min-width:48px;font-weight:600;">${label}</span>
+          <span>${em} ${desc}</span>
+          <span>${lo}~${hi}°C</span>
+        </div>`;
+      }).join('');
+    } else if (weatherCache) {
+      content.innerHTML = `<div style="text-align:center;color:var(--text-sub);padding:12px;"><p>🌤️ 已獲取即時天氣</p><p style="font-size:12px;margin-top:6px;">9天預報載入中...</p><div class="loader" style="margin-top:8px;"></div></div>`;
+      if (!forecastFetching) fetchRealForecast();
+    }
+  }
+
+  // ==================== 即時交通 (時段估算模型) ====================
+  function getTrafficStatus(road) {
+    const now = new Date();
+    const h = now.getHours(), d = now.getDay();
+    const wk = d === 0 || d === 6;
+    const rush = (h >= 7 && h <= 9) || (h >= 17 && h <= 19);
+    const night = h <= 6 || h >= 22;
+    const tbl = {
+      '大埔公路沙田段': { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '沙田路':           { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '獅子山隧道公路':   { wd: { r:'擠塞',    o:'行車緩慢',n:'暢順' }, we: { r:'行車緩慢',o:'暢順',n:'暢順' } },
+      '城門隧道公路':     { wd: { r:'多車',    o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } }
+    };
+    const p = tbl[road] || tbl['大埔公路沙田段'];
+    const s = wk ? (rush ? p.we.r : (night ? p.we.n : p.we.o)) : (rush ? p.wd.r : (night ? p.wd.n : p.wd.o));
+    let c = '#2ecc71';
+    if (s.includes('擠塞')) c = '#e74c3c'; else if (s.includes('緩慢') || s.includes('多車')) c = '#f1c40f';
+    return { text: s, color: c };
+  }
+
+  function updateTrafficUI() {
+    const roads = ['大埔公路沙田段','沙田路','獅子山隧道公路','城門隧道公路'];
+    const s = roads.map(r => getTrafficStatus(r));
+    const card = document.getElementById('trafficCard');
+    if (card) {
+      card.innerHTML = `
+        <div style="font-size:24px;" onclick="showTrafficDetail()">🚦</div>
+        <div style="flex:1;" onclick="showTrafficDetail()">
+          <strong>城門河畔即時交通</strong>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;display:flex;gap:8px;">
+            <span><span class="traffic-status" style="background:${s[0].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>大埔公路 ${s[0].text}</span>
+            <span><span class="traffic-status" style="background:${s[1].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>沙田路 ${s[1].text}</span>
+            <span><span class="traffic-status" style="background:${s[2].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>獅隧 ${s[2].text.replace('公路','')}</span>
+          </div>
+          <div style="font-size:11px;color:var(--accent-blue);margin-top:2px;">基於時段估算（非實時感應器數據）</div>
+        </div>
+      `;
+    }
+    const dc = document.getElementById('trafficDetailContent');
+    if (dc) {
+      const now = new Date();
+      const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      dc.innerHTML = roads.map((r,i) => `
+        <div style="${i>0?'margin-top:10px;':''}display:flex;justify-content:space-between;align-items:center;">
+          <strong>${r}</strong>
+          <span style="color:${s[i].color};font-weight:600;">${s[i].text}</span>
+        </div>
+      `).join('') + `<hr><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);"><span>🕐 ${ts}</span><span>📊 根據時段估算</span></div>`;
+    }
+    window._trafficCache = s.map((x,i) => ({ road: roads[i], text: x.text })).filter(x => x.text.includes('擠塞') || x.text.includes('緩慢'));
   }
 
   window.onload = () => {
     updateModeUI();
     initSpeechRecognition();
+    fetchRealWeather();
+    updateTrafficUI();
+    setInterval(() => { updateTrafficUI(); }, 300000); // refresh traffic every 5 min
+    setInterval(() => { fetchRealWeather(); }, 600000); // refresh weather every 10 min
   };
 </script>
 </body>
