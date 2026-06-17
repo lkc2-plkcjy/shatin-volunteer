@@ -1446,3 +1446,677 @@
     stopGPS();
     showToast("任務完成！獲得 1 小時服務時數 🎉", 'success');
     navTo('screenVolunteerBoard');
+  }
+
+  function cancelPhoto() {
+    pendingPhotoData = null;
+    document.getElementById('photoImage').style.display = 'none';
+    document.getElementById('photoPlaceholder').style.display = 'block';
+    document.getElementById('confirmCompleteBtn').disabled = true;
+    document.getElementById('confirmCompleteBtn').innerHTML = '📸 需要先拍攝';
+    document.getElementById('photoSection').style.display = 'none';
+    document.getElementById('completeActionBar').style.display = 'flex';
+  }
+
+  function cancelLiveTask() {
+    if (liveTaskAccepted) {
+      const req = liveRequests.find(r => r.id === liveTaskAccepted.id);
+      if (req) { req.status = 'pending'; req.assignedVolunteerId = null; saveToStorage('liveRequests', liveRequests); }
+      liveTaskAccepted = null; saveToStorage('liveTaskAccepted', null);
+      stopGPS();
+    }
+    navTo('screenVolunteerBoard');
+  }
+
+  function resumeTask(id) {
+    const req = liveRequests.find(r => r.id === id);
+    if (req) {
+      liveTaskAccepted = req;
+      saveToStorage('liveTaskAccepted', liveTaskAccepted);
+      showScreen('screenLiveMap');
+    }
+  }
+
+  // ==================== 義工接單大廳 ====================
+  function renderVolunteerBoard() {
+    const container = document.getElementById('volunteerBoardContent');
+    const now = Date.now();
+    // 🔧 按時間倒序：最新的排最頂
+    const allPending = liveRequests.filter(r => r.status === 'pending').sort((a, b) => b.id - a.id);
+    const myActive = liveRequests.filter(r => r.status === 'assigned' && r.assignedVolunteerId === currentUser?.userId).sort((a, b) => b.id - a.id);
+    // 🆕 將 pending 分為緊急 (>30分鐘前) 及 普通
+    const urgentRequests = allPending.filter(r => (now - r.id) > 30 * 60 * 1000);
+    const normalRequests = allPending.filter(r => (now - r.id) <= 30 * 60 * 1000);
+
+    let html = '';
+
+    // 我的進行中任務
+    if (myActive.length) {
+      html += `<div style="font-weight:700;margin-bottom:8px;">🚴 我的進行中任務</div>`;
+      myActive.forEach(req => {
+        html += `<div class="card" style="background:#1a3a2a;border-color:#2ecc71;margin-bottom:10px;cursor:pointer;" data-action="resume" data-id="${req.id}">
+          <div class="flex-row" style="justify-content:space-between;">
+            <span class="npc-badge">🟢 進行中</span>
+            <button class="btn-small btn-green" data-action="map" style="width:auto;">📍 查看地圖</button>
+          </div>
+          <strong>${req.title}</strong>
+          <p style="font-size:12px;color:var(--text-sub);">📍 ${req.locationName} · ${req.requesterName}</p>
+        </div>`;
+      });
+    }
+
+    // 等待中的求助
+    const totalPending = allPending.length;
+    html += `<div style="font-weight:700;margin:12px 0 8px 0;">🆘 附近求助 <span style="color:var(--accent-orange);">(${totalPending})</span></div>`;
+
+    if (!totalPending) {
+      html += `<div style="text-align:center;padding:30px;color:var(--text-sub);">
+        <div style="font-size:48px;margin-bottom:10px;">🎉</div>
+        <p>暫時冇新求助</p>
+        <p style="font-size:12px;">所有街坊都獲得緊幫助！</p>
+      </div>`;
+    } else {
+      // 🆕 緊急求助（>30分鐘未被接）
+      urgentRequests.forEach(req => {
+        const ago = timeSince(req.id);
+        html += `<div class="card" style="background:#4a1a1a;border-color:#ff0000;margin-bottom:10px;">
+          <div class="flex-row" style="justify-content:space-between;margin-bottom:4px;">
+            <span class="badge" style="background:#7f0000;">🔥 緊急 · 已等${ago}</span>
+            <span style="font-size:11px;color:#ff6b6b;">⚠️ 急需幫助</span>
+          </div>
+          <strong>${req.title}</strong>
+          <div style="display:flex;gap:12px;font-size:12px;color:var(--text-sub);margin:4px 0;">
+            <span>📍 ${req.locationName}</span>
+            ${volunteerGPS ? `<span>📏 ${getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) < 1 ? (getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) * 1000).toFixed(0) + 'm' : getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng).toFixed(2) + 'km'}</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">
+            <button class="btn btn-small btn-red" data-action="accept" data-id="${req.id}" style="width:auto;">🚀 優先接單</button>
+          </div>
+        </div>`;
+      });
+      // 普通求助
+      normalRequests.forEach(req => {
+        const ago = timeSince(req.id);
+        const d = volunteerGPS ? getDistance(volunteerGPS.lat, volunteerGPS.lng, req.lat, req.lng) : null;
+        const distStr = d ? (d < 1 ? (d * 1000).toFixed(0) + 'm' : d.toFixed(2) + 'km') : '';
+        html += `<div class="card" style="background:#3d2222;border-color:#e74c3c;margin-bottom:10px;">
+          <div class="flex-row" style="justify-content:space-between;margin-bottom:4px;">
+            <span class="badge" style="background:#7f2727;">🚨 即時呼求</span>
+            <span style="font-size:11px;color:var(--text-sub);">${ago}</span>
+          </div>
+          <strong>${req.title}</strong>
+          <div style="display:flex;gap:12px;font-size:12px;color:var(--text-sub);margin:4px 0;">
+            <span>📍 ${req.locationName}</span>
+            ${distStr ? `<span>📏 ${distStr}</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:6px;">
+            <button class="btn btn-small btn-red" data-action="accept" data-id="${req.id}" style="width:auto;">🚀 接單</button>
+          </div>
+        </div>`;
+      });
+    }
+
+    container.innerHTML = html;
+    // 🔧 Event delegation：一個 listener 處理所有掣，唔使逐個 onclick
+    container.onclick = function(e) {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = parseInt(btn.dataset.id);
+      if (action === 'accept') acceptLiveRequest(id);
+      else if (action === 'resume') resumeTask(id);
+      else if (action === 'map') showScreen('screenLiveMap');
+    };
+  }
+
+  // ==================== 討論區 ====================
+  function switchForumBoard(board) {
+    currentForumBoard = board;
+    document.querySelectorAll('#forumTabs .tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    forumPage[currentForumBoard] = 0;
+    renderForumPosts();
+  }
+
+  function renderForumPosts() {
+    const boardPosts = posts[currentForumBoard] || [];
+    const page = forumPage[currentForumBoard] || 0;
+    const visible = boardPosts.slice(0, (page+1)*POSTS_PER_PAGE);
+    const container = document.getElementById('postListContainer');
+    container.innerHTML = visible.map(post => {
+      const liked = post.liked && currentUser && post.liked.includes(currentUser.userId);
+      return `<div class="post-card" onclick="openPostDetail(${post.id})">
+        <div style="display:flex; justify-content:space-between;"><span class="anon-name">👤 ${post.anon}</span><button onclick="event.stopPropagation(); likePost(${post.id})" style="background:none;border:none;cursor:pointer;color:${liked?'var(--accent-orange)':'#777'};">❤️ ${post.likes||0}</button></div>
+        <strong>${post.title}</strong>
+        <p style="font-size:13px;color:var(--text-sub);">${post.content.length > 50 ? post.content.substring(0,50)+'...' : post.content}</p>
+      </div>`;
+    }).join('');
+    if (boardPosts.length > visible.length) {
+      container.innerHTML += `<button class="load-more" onclick="loadMorePosts()">載入更多貼文</button>`;
+    }
+  }
+
+  function loadMorePosts() {
+    forumPage[currentForumBoard] = (forumPage[currentForumBoard] || 0) + 1;
+    renderForumPosts();
+  }
+
+  function openNewPostForm() { document.getElementById('newPostForm').style.display = 'block'; }
+  function submitPost() {
+    const title = document.getElementById('newPostTitle').value.trim();
+    const content = document.getElementById('newPostContent').value.trim();
+    if (!title || !content) { showToast("請輸入內容", 'error'); return; }
+    const newPost = { id: Date.now(), title, content, anon: '熱心街坊_' + Math.floor(100+Math.random()*900), likes: 0, liked: [] };
+    if (!posts[currentForumBoard]) posts[currentForumBoard] = [];
+    posts[currentForumBoard].push(newPost);
+    saveToStorage('posts', posts);
+    document.getElementById('newPostTitle').value = '';
+    document.getElementById('newPostContent').value = '';
+    document.getElementById('newPostForm').style.display = 'none';
+    renderForumPosts();
+  }
+
+  function likePost(id) {
+    if (!currentUser) { showToast("請先登入", 'error'); return; }
+    const list = posts[currentForumBoard] || [];
+    const post = list.find(p => p.id === id);
+    if (!post) return;
+    if (!post.liked) post.liked = [];
+    const idx = post.liked.indexOf(currentUser.userId);
+    if (idx === -1) { post.liked.push(currentUser.userId); post.likes = (post.likes||0)+1; }
+    else { post.liked.splice(idx,1); post.likes = Math.max(0, (post.likes||0)-1); }
+    saveToStorage('posts', posts);
+    renderForumPosts();
+  }
+
+  function openPostDetail(id) {
+    const boardPosts = posts[currentForumBoard] || [];
+    const post = boardPosts.find(p => p.id === id);
+    if (!post) return;
+    const liked = post.liked && currentUser && post.liked.includes(currentUser.userId);
+    document.getElementById('postDetailContent').innerHTML = `
+      <div class="card">
+        <div class="flex-row" style="justify-content:space-between; margin-bottom:8px;">
+          <span class="anon-name">👤 ${post.anon}</span>
+          <button onclick="likePostFromDetail(${post.id})" style="background:none;border:none;cursor:pointer;color:${liked?'var(--accent-orange)':'#777'};">❤️ ${post.likes||0}</button>
+        </div>
+        <h3>${post.title}</h3>
+        <p style="margin-top:10px; line-height:1.6;">${post.content}</p>
+      </div>
+    `;
+    showScreen('screenPostDetail');
+  }
+
+  function likePostFromDetail(id) {
+    likePost(id);
+    const boardPosts = posts[currentForumBoard] || [];
+    const post = boardPosts.find(p => p.id === id);
+    if (post) openPostDetail(id);
+  }
+
+  function backToForum() { navTo('screenForum'); }
+
+  function showWeatherDetail() {
+    showScreen('screenWeatherDetail');
+    updateWeatherDetailScreen();
+    if (!weatherCache) fetchRealWeather();
+  }
+  function showTrafficDetail() {
+    showScreen('screenTrafficDetail');
+    updateTrafficUI();
+  }
+
+  // ==================== NGO 後台 ====================
+  function switchNgoTab(tab) {
+    document.getElementById('ngoTabTasks').className = tab === 'tasks' ? 'tab active' : 'tab';
+    document.getElementById('ngoTabKyc').className = tab === 'kyc' ? 'tab active' : 'tab';
+    document.getElementById('ngoTabMonitor').className = tab === 'monitor' ? 'tab active' : 'tab';
+    document.getElementById('ngoTasksSection').style.display = tab === 'tasks' ? 'flex' : 'none';
+    document.getElementById('ngoKycSection').style.display = tab === 'kyc' ? 'flex' : 'none';
+    document.getElementById('ngoMonitorSection').style.display = tab === 'monitor' ? 'flex' : 'none';
+    if (tab === 'kyc') renderKycList();
+    if (tab === 'monitor') renderMonitorDashboard();
+  }
+
+  function updateNgoDashboardData() {
+    document.getElementById('statPending').innerText = liveRequests.filter(r => r.status === 'pending').length;
+    document.getElementById('statActive').innerText = liveRequests.filter(r => r.status === 'assigned').length;
+    document.getElementById('statDone').innerText = liveRequests.filter(r => r.status === 'completed').length;
+  }
+
+  function renderNgoTasks() {
+    document.getElementById('ngoTaskList').innerHTML = tasks.map(t => `<div class="card"><strong>${t.title}</strong><p style="font-size:12px;">名額: ${t.quota} | 報名: ${t.enrolled?t.enrolled.length:0}</p></div>`).join('');
+  }
+
+  function openNewTaskForm() { document.getElementById('newTaskForm').style.display = 'block'; }
+  function addNgoTask() {
+    const title = document.getElementById('newTaskTitle').value.trim();
+    const date = document.getElementById('newTaskDate').value;
+    const time = document.getElementById('newTaskTime').value;
+    const quota = parseInt(document.getElementById('newTaskQuota').value) || 2;
+    const loc = document.getElementById('newTaskLocation').value.trim();
+    if (!title) return showToast("請輸入任務名稱", 'error');
+    tasks.push({ id: Date.now(), ngo: '沙田長者鄰舍中心', title, date, time, location: loc, quota, enrolled: [], completed: [], icon: '📌', description: '', signIns: {} });
+    saveToStorage('tasks', tasks);
+    document.getElementById('newTaskForm').style.display = 'none';
+    renderNgoTasks();
+  }
+
+  function openLiveRequestForm() { document.getElementById('liveRequestForm').style.display = 'block'; }
+  function publishLiveRequest() {
+    const title = document.getElementById('liveReqTitle').value.trim();
+    const coordsStr = document.getElementById('liveReqLocation').value;
+    if (!title) return;
+    const [lat, lng] = coordsStr.split(',').map(Number);
+    liveRequests.push({ id: Date.now(), ngo: '長者呼救', title, locationName: shatinLocations[coordsStr] || '沙田區', lat, lng, requesterName: '沙田獨居長者', status: 'pending', requesterUserId: 'u1' });
+    saveToStorage('liveRequests', liveRequests);
+    document.getElementById('liveRequestForm').style.display = 'none';
+    updateNgoDashboardData();
+    showToast("即時需求已廣播！", 'success');
+  }
+
+  // ==================== AI 語音求助 ====================
+  // 沙田區常見地點 → 經緯度對照
+  const SHATIN_LOCATIONS = {
+    '禾輋邨': '22.382,114.189',
+    '瀝源邨': '22.382,114.193',
+    '沙田市中心': '22.382,114.189',
+    '沙田圍': '22.373,114.195',
+    '沙田': '22.382,114.189',
+    '新城市廣場': '22.382,114.188',
+    '火炭': '22.399,114.191',
+    '馬鞍山': '22.425,114.228',
+    '大圍': '22.376,114.178',
+    '石門': '22.388,114.209',
+    '第一城': '22.387,114.203',
+    '顯徑': '22.365,114.173',
+    '大水坑': '22.414,114.224',
+    '烏溪沙': '22.432,114.240',
+    '恆安': '22.415,114.222',
+    '博康': '22.376,114.190',
+    '車公廟': '22.379,114.185',
+    '沙田公園': '22.381,114.189',
+    '沙田大會堂': '22.381,114.187',
+    '沙田圖書館': '22.380,114.187',
+    '沙田醫院': '22.383,114.175',
+    '威爾斯親王醫院': '22.378,114.193',
+    '秦石': '22.379,114.185',
+    '新田圍': '22.365,114.181',
+    '美林': '22.370,114.176',
+    '沙田頭': '22.370,114.015',
+  };
+
+  function findLocationCoords(locationName) {
+    // Try exact match first
+    if (SHATIN_LOCATIONS[locationName]) {
+      return SHATIN_LOCATIONS[locationName];
+    }
+    // Try partial match: check if locationName contains any key
+    for (const [key, coords] of Object.entries(SHATIN_LOCATIONS)) {
+      if (locationName.includes(key) || key.includes(locationName)) {
+        return coords;
+      }
+    }
+    // Default to Sha Tin centre
+    return '22.382,114.189';
+  }
+
+  function publishHelpFromAI(title, locationName) {
+    // Map location name to coordinates
+    const coordsStr = findLocationCoords(locationName);
+    const [lat, lng] = coordsStr.split(',').map(Number);
+
+    const newRequest = {
+      id: Date.now(),
+      ngo: '長者呼救',
+      title: title,
+      locationName: SHATIN_LOCATIONS[coordsStr] || locationName || '沙田區',
+      lat, lng,
+      requesterName: currentUser ? currentUser.name : '沙田街坊',
+      status: 'pending',
+      requesterUserId: currentUser ? currentUser.userId : 'anonymous',
+    };
+    liveRequests.push(newRequest);
+    saveToStorage('liveRequests', liveRequests);
+
+    // 顯示成功通知
+    const notif = document.createElement('div');
+    notif.style.cssText = 'position:fixed;bottom:100px;left:16px;right:16px;background:#2ecc71;color:white;padding:16px 20px;border-radius:20px;font-weight:700;text-align:center;z-index:999;box-shadow:0 6px 20px rgba(46,204,113,0.4);animation:fadeInUp 0.3s ease;';
+    notif.innerHTML = `✅ 求助已發布！<br><span style="font-size:13px;font-weight:400;">${title} · ${locationName}</span>`;
+    document.getElementById('appContainer').appendChild(notif);
+    setTimeout(() => { notif.style.opacity = '0'; notif.style.transition = 'opacity 0.5s'; setTimeout(() => notif.remove(), 500); }, 4000);
+
+    // 如果主頁面顯示中，更新即時求助列表
+    if (document.getElementById('screenTaskList').classList.contains('active')) {
+      renderLiveRequests();
+    }
+    // 如果 NGO dashboard 顯示中，更新統計
+    if (document.getElementById('screenNgoDashboard').classList.contains('active')) {
+      updateNgoDashboardData();
+    }
+  }
+
+  // ==================== 實時監控中心 ====================
+  function renderMonitorDashboard() {
+    const now = Date.now();
+    const pending = liveRequests.filter(r => r.status === 'pending');
+    const active = liveRequests.filter(r => r.status === 'assigned');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const doneToday = liveRequests.filter(r => r.status === 'completed' && timeSince(r.id).includes('分鐘') && (now - r.id) < 86400000);
+
+    document.getElementById('monPending').innerText = pending.length;
+    document.getElementById('monActive').innerText = active.length;
+    document.getElementById('monDone').innerText = doneToday.length;
+    document.getElementById('monCitizens').innerText = usersList.filter(u => u.role === 'citizen').length;
+
+    const allRequests = [...liveRequests].sort((a, b) => b.id - a.id);
+    const timeline = document.getElementById('monitorTimeline');
+
+    if (!allRequests.length) {
+      timeline.innerHTML = '<div style="color:var(--text-sub);text-align:center;padding:12px;">📋 未有求助紀錄</div>';
+      return;
+    }
+
+    timeline.innerHTML = allRequests.map(r => {
+      const age = timeSince(r.id);
+      const statusColors = { pending: '#ff6b35', assigned: '#5d78ff', completed: '#2ecc71' };
+      const statusLabels = { pending: '🟡 等待', assigned: '🔵 進行中', completed: '🟢 完成' };
+      const color = statusColors[r.status] || '#666';
+      const label = statusLabels[r.status] || r.status;
+      const assignedTo = r.assignedVolunteerId ? usersList.find(u => u.userId === r.assignedVolunteerId) : null;
+      return `
+        <div style="border-left:3px solid ${color};padding:4px 8px;background:var(--bg-card);border-radius:0 8px 8px 0;">
+          <div class="flex-row" style="justify-content:space-between;">
+            <span style="color:${color};font-weight:600;">${label}</span>
+            <span style="font-size:11px;color:var(--text-sub);">${age}</span>
+          </div>
+          <div style="font-size:13px;">${r.title}</div>
+          <div style="font-size:11px;color:var(--text-sub);">
+            📍 ${r.locationName} · 👤 ${r.requesterName}
+            ${assignedTo ? ` · 🚴 ${assignedTo.name}` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    updateNgoDashboardData();
+  }
+
+  function renderKycList() {
+    const container = document.getElementById('kycListContainer');
+    // 統一市民制後無需義工審核，顯示已註冊市民列表
+    const citizens = usersList.filter(u => u.role === 'citizen');
+    container.innerHTML = `<strong style="color:var(--accent-green);">👥 已註冊沙田友市民 (${citizens.length})</strong>` +
+      (citizens.length ? citizens.map(v => `<div class="card flex-row" style="justify-content:space-between;"><div><strong>${v.name}</strong><p style="font-size:12px;color:var(--text-sub);">${v.phone}</p></div><span class="npc-badge">已認證</span></div>`).join('') : '<p>暫無</p>');
+  }
+
+  // ==================== AI 聊天 ====================
+  function openAiChat() { document.getElementById('aiChatOverlay').classList.add('active'); renderAiMessages(); }
+  function closeAiChat() { document.getElementById('aiChatOverlay').classList.remove('active'); }
+
+  // 快速求助按鈕：填入訊息並發送
+  function quickHelp(helpType) {
+    const input = document.getElementById('aiChatInput');
+    input.value = `我喺沙田需要幫手，${helpType}，有冇街坊可以幫我？`;
+    sendAiMessage();
+  }
+
+  function renderAiMessages() {
+    const container = document.getElementById('aiChatMessages');
+    container.innerHTML = chatHistory.map(m => `<div class="ai-msg ${m.sender}">${m.text.replace(/\n/g,'<br>')}</div>`).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendAiMessage() {
+    const input = document.getElementById('aiChatInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+    chatHistory.push({ text: txt, sender: 'user' });
+    input.value = '';
+    renderAiMessages();
+
+    // 🔍 前端關鍵字偵測：如果街坊需要幫助，直接觸發求助（唔使靠 AI）
+    const helpKeywords = ['幫手', '求助', '需要幫', '幫我', '買餸', '跌親', '拎藥', '唔舒服', '搬嘢', '幫吓', '幫下', '可唔可以幫'];
+    const needsHelp = helpKeywords.some(kw => txt.includes(kw));
+    if (needsHelp) {
+      // 嘗試從訊息中搵出地點
+      let helpLocation = '沙田';
+      for (const loc of Object.keys(SHATIN_LOCATIONS)) {
+        if (txt.includes(loc)) { helpLocation = loc; break; }
+      }
+      // 用訊息頭幾個字做標題
+      let helpTitle = txt.length > 30 ? txt.substring(0, 30) + '...' : txt;
+      helpTitle = helpTitle.replace(/[，。！？,\.!?]/g, ' ').trim();
+      // 發佈求助（唔使等 AI 回應）
+      publishHelpFromAI(helpTitle, helpLocation);
+    }
+
+    // Show loading indicator
+    chatHistory.push({ text: '🤔 等我諗下...', sender: 'bot' });
+    renderAiMessages();
+    // Call AI backend (local proxy or Cloudflare Worker)
+    fetch(AI_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: txt, history: chatHistory.slice(0, -1) })
+    })
+    .then(r => r.json())
+    .then(data => {
+      // Remove loading bubble
+      chatHistory.pop();
+      const reply = data.reply || '唔好意思，我答唔到你呢個問題。';
+      chatHistory.push({ text: reply, sender: 'bot' });
+      renderAiMessages();
+      speakText(reply);
+    })
+    .catch(err => {
+      chatHistory.pop();
+      const fallback = '⚠️ AI 暫時離線，請確認 proxy 已啟動（python ai_proxy.py）';
+      chatHistory.push({ text: fallback, sender: 'bot' });
+      renderAiMessages();
+      speakText('AI 暫時離線');
+    });
+  }
+
+  // ==================== 真實天氣數據 (香港天文台 HKO) ====================
+  const HKO_RHRREAD = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc';
+  const HKO_FND = 'https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc';
+
+  let weatherCache = null;
+  let forecastCache = null;
+  let weatherFetching = false;
+  let forecastFetching = false;
+
+  function weatherEmojiFromIcon(icon) {
+    if (!icon) return '⛅';
+    if (icon >= 50 && icon <= 59) return '☀️';
+    if (icon >= 60 && icon <= 69) return '⛅';
+    if (icon >= 70 && icon <= 79) return '☁️';
+    if (icon >= 80 && icon <= 89) return '🌧️';
+    if (icon >= 90 && icon <= 99) return '⛈️';
+    return '⛅';
+  }
+  function weatherEmoji(desc) {
+    if (!desc) return '⛅';
+    if (desc.includes('雷') || (desc.includes('雨') && desc.includes('暴'))) return '⛈️';
+    if (desc.includes('雨') || desc.includes('驟')) return '🌧️';
+    if (desc.includes('晴') && desc.includes('多雲')) return '⛅';
+    if (desc.includes('晴') || desc.includes('天晴')) return '☀️';
+    if (desc.includes('多雲') || desc.includes('雲') || desc.includes('陰')) return '☁️';
+    if (desc.includes('霧')) return '🌫️';
+    return '⛅';
+  }
+
+  async function fetchRealWeather() {
+    if (weatherFetching) return;
+    weatherFetching = true;
+    try {
+      const res = await fetch(HKO_RHRREAD);
+      const data = await res.json();
+      weatherCache = data;
+
+      const shaTinTemp = data.temperature?.data?.find(t => t.place === '沙田');
+      const temp = shaTinTemp ? shaTinTemp.value : null;
+      const shaTinHumidity = data.humidity?.data?.find(h => h.place === '沙田');
+      const humidity = shaTinHumidity ? shaTinHumidity.value : (data.humidity?.data?.[0]?.value ?? '--');
+      const weatherDesc = data.weather || '多雲';
+      const emoji = data.icon ? weatherEmojiFromIcon(data.icon) : weatherEmoji(weatherDesc);
+      const tempStr = temp !== null ? `${temp}°C` : '--°C';
+      const humidityStr = `${humidity}%`;
+
+      const card = document.getElementById('weatherCard');
+      if (card) {
+        card.innerHTML = `
+          <div style="font-size:28px;" onclick="showWeatherDetail()">${emoji}</div>
+          <div onclick="showWeatherDetail()">
+            <strong>沙田區 即時天氣</strong>
+            <div style="font-size:13px; color:var(--text-sub);">${weatherDesc} · ${tempStr} · 濕度 ${humidityStr}</div>
+            <div style="font-size:11px; color:var(--accent-blue); margin-top:2px;">資料來源：香港天文台</div>
+          </div>
+        `;
+      }
+      window._weatherCache = { temp: tempStr, humidity: humidityStr, desc: weatherDesc, emoji };
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+      fetchRealForecast();
+    } catch (e) {
+      console.warn('天氣讀取失敗', e);
+      window._weatherCache = { temp: '--°C', humidity: '--%', desc: '未能獲取', emoji: '⛅' };
+    } finally { weatherFetching = false; }
+  }
+
+  async function fetchRealForecast() {
+    if (forecastFetching) return;
+    forecastFetching = true;
+    try {
+      const res = await fetch(HKO_FND);
+      forecastCache = await res.json();
+      if (document.getElementById('screenWeatherDetail').classList.contains('active')) updateWeatherDetailScreen();
+    } catch (e) { console.warn('預報讀取失敗', e); }
+    finally { forecastFetching = false; }
+  }
+
+  function getDayName(offset) {
+    const names = ['週日','週一','週二','週三','週四','週五','週六'];
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return names[d.getDay()];
+  }
+  function getTodayStr() {
+    const d = new Date();
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+  }
+
+  function updateWeatherDetailScreen() {
+    const summary = document.getElementById('weatherDetailSummary');
+    const content = document.getElementById('weatherDetailContent');
+    if (!summary || !content) return;
+
+    if (weatherCache) {
+      const st = weatherCache.temperature?.data?.find(t => t.place === '沙田');
+      const t = st ? st.value : null;
+      const sh = weatherCache.humidity?.data?.find(h => h.place === '沙田');
+      const h = sh ? sh.value : (weatherCache.humidity?.data?.[0]?.value ?? '--');
+      const emoji = weatherCache.icon ? weatherEmojiFromIcon(weatherCache.icon) : weatherEmoji(weatherCache.weather);
+      summary.innerHTML = `
+        <div><strong>${emoji} 今日 (${getTodayStr()})</strong></div>
+        <div style="color:var(--accent-orange);">${t !== null ? t+'°C' : '--'} / ${h}%</div>
+      `;
+    }
+
+    if (forecastCache && forecastCache.weatherForecast) {
+      const fc = forecastCache.weatherForecast;
+      const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      content.innerHTML = fc.slice(0, 9).map((f, i) => {
+        const fDate = f.forecastDate || '';
+        let label;
+        if (fDate === todayStr) label = '今日';
+        else {
+          const nextDay = new Date(); nextDay.setDate(nextDay.getDate()+1);
+          const tomorrowStr = nextDay.toISOString().slice(0,10).replace(/-/g,'');
+          label = fDate === tomorrowStr ? '明日' : (f.week || getDayName(i));
+        }
+        const desc = f.forecastWeather || '--';
+        const em = weatherEmoji(desc);
+        const hi = f.forecastMaxtemp?.value ?? '--';
+        const lo = f.forecastMintemp?.value ?? '--';
+        return `<div class="flex-row" style="justify-content:space-between;padding:6px 0;border-bottom:${i<8?'1px solid var(--border-color)':'none'}">
+          <span style="min-width:48px;font-weight:600;">${label}</span>
+          <span>${em} ${desc}</span>
+          <span>${lo}~${hi}°C</span>
+        </div>`;
+      }).join('');
+    } else if (weatherCache) {
+      content.innerHTML = `<div style="text-align:center;color:var(--text-sub);padding:12px;"><p>🌤️ 已獲取即時天氣</p><p style="font-size:12px;margin-top:6px;">9天預報載入中...</p><div class="loader" style="margin-top:8px;"></div></div>`;
+      if (!forecastFetching) fetchRealForecast();
+    }
+  }
+
+  // ==================== 即時交通 (時段估算模型) ====================
+  function getTrafficStatus(road) {
+    const now = new Date();
+    const h = now.getHours(), d = now.getDay();
+    const wk = d === 0 || d === 6;
+    const rush = (h >= 7 && h <= 9) || (h >= 17 && h <= 19);
+    const night = h <= 6 || h >= 22;
+    const tbl = {
+      '大埔公路沙田段': { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '沙田路':           { wd: { r:'行車緩慢',o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } },
+      '獅子山隧道公路':   { wd: { r:'擠塞',    o:'行車緩慢',n:'暢順' }, we: { r:'行車緩慢',o:'暢順',n:'暢順' } },
+      '城門隧道公路':     { wd: { r:'多車',    o:'暢順',n:'暢順' }, we: { r:'暢順',o:'暢順',n:'暢順' } }
+    };
+    const p = tbl[road] || tbl['大埔公路沙田段'];
+    const s = wk ? (rush ? p.we.r : (night ? p.we.n : p.we.o)) : (rush ? p.wd.r : (night ? p.wd.n : p.wd.o));
+    let c = '#2ecc71';
+    if (s.includes('擠塞')) c = '#e74c3c'; else if (s.includes('緩慢') || s.includes('多車')) c = '#f1c40f';
+    return { text: s, color: c };
+  }
+
+  function updateTrafficUI() {
+    const roads = ['大埔公路沙田段','沙田路','獅子山隧道公路','城門隧道公路'];
+    const s = roads.map(r => getTrafficStatus(r));
+    const card = document.getElementById('trafficCard');
+    if (card) {
+      card.innerHTML = `
+        <div style="font-size:24px;" onclick="showTrafficDetail()">🚦</div>
+        <div style="flex:1;" onclick="showTrafficDetail()">
+          <strong>城門河畔即時交通</strong>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;display:flex;gap:8px;">
+            <span><span class="traffic-status" style="background:${s[0].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>大埔公路 ${s[0].text}</span>
+            <span><span class="traffic-status" style="background:${s[1].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>沙田路 ${s[1].text}</span>
+            <span><span class="traffic-status" style="background:${s[2].color};display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>獅隧 ${s[2].text.replace('公路','')}</span>
+          </div>
+          <div style="font-size:11px;color:var(--accent-blue);margin-top:2px;">基於時段估算（非實時感應器數據）</div>
+        </div>
+      `;
+    }
+    const dc = document.getElementById('trafficDetailContent');
+    if (dc) {
+      const now = new Date();
+      const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      dc.innerHTML = roads.map((r,i) => `
+        <div style="${i>0?'margin-top:10px;':''}display:flex;justify-content:space-between;align-items:center;">
+          <strong>${r}</strong>
+          <span style="color:${s[i].color};font-weight:600;">${s[i].text}</span>
+        </div>
+      `).join('') + `<hr><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);"><span>🕐 ${ts}</span><span>📊 根據時段估算</span></div>`;
+    }
+    window._trafficCache = s.map((x,i) => ({ road: roads[i], text: x.text })).filter(x => x.text.includes('擠塞') || x.text.includes('緩慢'));
+  }
+
+  window.onload = () => {
+    updateModeUI();
+    initSpeechRecognition();
+    fetchRealWeather();
+    updateTrafficUI();
+    startGPS();
+    dataCleanup();
+    // 🔧 註冊 PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(() => console.log('PWA SW registered'))
+        .catch(() => {}); // 靜默失敗，唔影響 app
+    }
+    setInterval(() => { updateTrafficUI(); }, 300000);
+    setInterval(() => { fetchRealWeather(); }, 600000);
+  };
+</script>
+</body>
+</html>
