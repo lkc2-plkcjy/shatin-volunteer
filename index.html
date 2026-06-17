@@ -788,9 +788,10 @@
   // ==================== AI API 設定 ====================
   // 本地測試用：python ai_proxy.py
   // 上線用：改做 Cloudflare Worker URL（見下方注釋）
-  const AI_API_URL = 'http://127.0.0.1:5003/api/chat';
-  // Cloudflare Worker 上線版（申請好後取消下行注釋，注釋上行）：
-  // const AI_API_URL = 'https://shatin-ai-proxy.你的名字.workers.dev/api/chat';
+  // 上線用：Cloudflare Worker
+  const AI_API_URL = 'https://cool-disk-220e.lkc2.workers.dev/api/chat';
+  // 本地測試用（開 python ai_proxy.py 時取消注釋）：
+  // const AI_API_URL = 'http://127.0.0.1:5003/api/chat';
 
   // ==================== 語音與 TTS ====================
   function speakText(text) {
