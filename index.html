@@ -628,9 +628,12 @@
       </div>
       <div class="ai-chat-messages" id="aiChatMessages"></div>
       <div style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px;">
-        <button onclick="quickHelp('跌親需要幫手')" style="white-space:nowrap;background:#3d2222;border:1px solid #e74c3c;color:#ff6b6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🆘 跌親求助</button>
-        <button onclick="quickHelp('買餸/物資需要幫手')" style="white-space:nowrap;background:#2b3d22;border:1px solid #4caf50;color:#6bff6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🛒 買餸求助</button>
+<button onclick="quickHelp('跌親需要幫手')" style="white-space:nowrap;background:#3d2222;border:1px solid #e74c3c;color:#ff6b6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🆘 跌親</button>
+        <button onclick="quickHelp('買餸需要幫手')" style="white-space:nowrap;background:#2b3d22;border:1px solid #4caf50;color:#6bff6b;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🛒 買餸</button>
         <button onclick="quickHelp('唔舒服需要幫手')" style="white-space:nowrap;background:#2b223c;border:1px solid #9c27b0;color:#ce93d8;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🤒 唔舒服</button>
+        <button onclick="quickHelp('搬重嘢需要幫手')" style="white-space:nowrap;background:#3d3022;border:1px solid #ff9800;color:#ffb74d;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">📦 搬嘢</button>
+        <button onclick="quickHelp('拎藥需要幫手')" style="white-space:nowrap;background:#223d3d;border:1px solid #00bcd4;color:#80deea;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">💊 拎藥</button>
+        <button onclick="quickHelp('需要人陪去覆診')" style="white-space:nowrap;background:#2d223d;border:1px solid #7c4dff;color:#b388ff;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">🏥 覆診</button>
       </div>
       <div class="ai-chat-input-area">
         <button class="mic-btn" id="aiMicBtn" onclick="toggleAiVoiceInput()">🎤</button>
@@ -1876,7 +1879,7 @@
     renderAiMessages();
 
     // 🔍 前端關鍵字偵測：如果街坊需要幫助，直接觸發求助（唔使靠 AI）
-    const helpKeywords = ['幫手', '求助', '需要幫', '幫我', '買餸', '跌親', '拎藥', '唔舒服', '搬嘢', '幫吓', '幫下', '可唔可以幫'];
+    const helpKeywords = [ '搵義工', '幫手', '求助', '幫忙', '需要幫', '幫我', '買餸', '跌親', '拎藥', '唔舒服', '搬嘢', '幫吓', '幫下', '可唔可以幫'];
     const needsHelp = helpKeywords.some(kw => txt.includes(kw));
     if (needsHelp) {
       // 嘗試從訊息中搵出地點
