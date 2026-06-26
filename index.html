@@ -121,6 +121,13 @@
       background: var(--bg-card); border-radius: 16px; padding: 14px; margin-bottom: 10px;
       border: 1px solid var(--border-color); cursor: pointer;
     }
+    .comment-card {
+      background: var(--bg-primary); border-radius: 14px; padding: 12px; margin-bottom: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .comment-input-area {
+      display: flex; gap: 8px; margin-top: 12px; align-items: center;
+    }
     .anon-name { color: var(--accent-orange); font-weight: 600; font-size: 13px; }
     #liveMap { height: 260px; width: 100%; border-radius: 20px; margin: 8px 0; border: 2px solid var(--border-color); }
     .eta-box {
@@ -390,6 +397,12 @@
       <span style="font-weight:700;">貼文內容</span>
     </div>
     <div id="postDetailContent"></div>
+    <!-- 留言區 -->
+    <div id="commentSection" style="margin-top:12px;"></div>
+    <div class="comment-input-area" id="commentInputArea">
+      <input class="input-field" type="text" id="commentInput" placeholder="寫下你的回應..." style="flex:1;">
+      <button class="btn btn-small" onclick="submitComment()" style="flex-shrink:0;">💬 發送</button>
+    </div>
   </div>
 
   <!-- NGO 後台 -->
@@ -740,21 +753,21 @@
 
   const DEFAULT_POSTS = {
     shatin: [
-      { id: 1, title: '瀝源邨街坊互助', content: '新城市廣場今晚有物資分配，有需要嘅長者可以去看看。', anon: '城門河畔的貓', likes: 6, liked: [] },
-      { id: 2, title: '禾輋邨有冇人見到隻黃貓？', content: '最近成日喺禾輋商場附近見到一隻黃貓，好親人，唔知有冇人識佢主人？', anon: '禾輋街坊', likes: 3, liked: [] },
-      { id: 3, title: '沙田公園新開的咖啡店', content: '試咗佢哋嘅 flat white，幾好！大家可以去試吓。', anon: '瀝源街坊', likes: 8, liked: [] }
+      { id: 1, title: '瀝源邨街坊互助', content: '新城市廣場今晚有物資分配，有需要嘅長者可以去看看。', anon: '城門河畔的貓', likes: 6, liked: [], comments: [] },
+      { id: 2, title: '禾輋邨有冇人見到隻黃貓？', content: '最近成日喺禾輋商場附近見到一隻黃貓，好親人，唔知有冇人識佢主人？', anon: '禾輋街坊', likes: 3, liked: [], comments: [] },
+      { id: 3, title: '沙田公園新開的咖啡店', content: '試咗佢哋嘅 flat white，幾好！大家可以去試吓。', anon: '瀝源街坊', likes: 8, liked: [], comments: [] }
     ],
     campus: [
-      { id: 4, title: '搵人一齊溫書（大圍）', content: 'DSE 數學，有冇人想組study group？', anon: '沙田學生哥', likes: 2, liked: [] },
-      { id: 5, title: '沙田IVE附近有冇平價午餐推介？', content: '每日食飯好貴，各位同學有冇推薦？', anon: 'IVE學生', likes: 5, liked: [] }
+      { id: 4, title: '搵人一齊溫書（大圍）', content: 'DSE 數學，有冇人想組study group？', anon: '沙田學生哥', likes: 2, liked: [], comments: [] },
+      { id: 5, title: '沙田IVE附近有冇平價午餐推介？', content: '每日食飯好貴，各位同學有冇推薦？', anon: 'IVE學生', likes: 5, liked: [], comments: [] }
     ],
     secondhand: [
-      { id: 6, title: '送出 IKEA 書枱（大圍自取）', content: '新舊如圖，有意PM，希望可以幫到有需要嘅同學。', anon: '大圍師姐', likes: 1, liked: [] },
-      { id: 7, title: '求二手單車一部', content: '想買一部二手單車代步，沙田區內交收。', anon: '單車友', likes: 0, liked: [] }
+      { id: 6, title: '送出 IKEA 書枱（大圍自取）', content: '新舊如圖，有意PM，希望可以幫到有需要嘅同學。', anon: '大圍師姐', likes: 1, liked: [], comments: [] },
+      { id: 7, title: '求二手單車一部', content: '想買一部二手單車代步，沙田區內交收。', anon: '單車友', likes: 0, liked: [], comments: [] }
     ],
     treehole: [
-      { id: 8, title: '有時覺得好大壓力', content: '返學好攰，但又唔敢同人講...', anon: '迷途小書蟲', likes: 12, liked: [] },
-      { id: 9, title: '多謝沙田長者鄰舍中心', content: '上星期有義工幫我整好咗個水喉，真係好多謝佢哋！', anon: '感恩婆婆', likes: 9, liked: [] }
+      { id: 8, title: '有時覺得好大壓力', content: '返學好攰，但又唔敢同人講...', anon: '迷途小書蟲', likes: 12, liked: [], comments: [] },
+      { id: 9, title: '多謝沙田長者鄰舍中心', content: '上星期有義工幫我整好咗個水喉，真係好多謝佢哋！', anon: '感恩婆婆', likes: 9, liked: [], comments: [] }
     ]
   };
 
@@ -781,6 +794,7 @@
   let isOnline = getFromStorage('isOnline', false);
   let liveTaskAccepted = getFromStorage('liveTaskAccepted', null);
   let currentForumBoard = 'shatin';
+  let currentPostId = null;
   let liveMapInstance = null;
   let speechRecognitionInstance = null;
   let isRecording = false;
@@ -1610,7 +1624,7 @@
     const title = document.getElementById('newPostTitle').value.trim();
     const content = document.getElementById('newPostContent').value.trim();
     if (!title || !content) { showToast("請輸入內容", 'error'); return; }
-    const newPost = { id: Date.now(), title, content, anon: '熱心街坊_' + Math.floor(100+Math.random()*900), likes: 0, liked: [] };
+    const newPost = { id: Date.now(), title, content, anon: '熱心街坊_' + Math.floor(100+Math.random()*900), likes: 0, liked: [], comments: [] };
     if (!posts[currentForumBoard]) posts[currentForumBoard] = [];
     posts[currentForumBoard].push(newPost);
     saveToStorage('posts', posts);
@@ -1634,6 +1648,7 @@
   }
 
   function openPostDetail(id) {
+    currentPostId = id;
     const boardPosts = posts[currentForumBoard] || [];
     const post = boardPosts.find(p => p.id === id);
     if (!post) return;
@@ -1648,7 +1663,48 @@
         <p style="margin-top:10px; line-height:1.6;">${post.content}</p>
       </div>
     `;
+    renderComments(post);
     showScreen('screenPostDetail');
+  }
+
+  function renderComments(post) {
+    const section = document.getElementById('commentSection');
+    const comments = post.comments || [];
+    if (comments.length === 0) {
+      section.innerHTML = `<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:12px;">💬 仲未有回應，做第一個留言嘅街坊啦！</div>`;
+    } else {
+      section.innerHTML = comments.map(c => `
+        <div class="comment-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span class="anon-name">👤 ${c.anon}</span>
+            <span style="font-size:11px;color:var(--text-sub);">${c.time}</span>
+          </div>
+          <p style="font-size:14px;line-height:1.4;">${c.content}</p>
+        </div>
+      `).join('');
+    }
+    document.getElementById('commentInput').value = '';
+  }
+
+  function submitComment() {
+    if (!currentUser) { showToast('請先登入', 'error'); return; }
+    const content = document.getElementById('commentInput').value.trim();
+    if (!content) { showToast('請輸入回應內容', 'error'); return; }
+    const boardPosts = posts[currentForumBoard] || [];
+    const post = boardPosts.find(p => p.id === currentPostId);
+    if (!post) return;
+    if (!post.comments) post.comments = [];
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    post.comments.push({
+      id: Date.now(),
+      anon: currentUser.name || '熱心街坊',
+      content: content,
+      time: timeStr
+    });
+    saveToStorage('posts', posts);
+    renderComments(post);
+    showToast('回應已發布！', 'success');
   }
 
   function likePostFromDetail(id) {
