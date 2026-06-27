@@ -322,8 +322,8 @@
     <!-- 🎤 語音一鍵求助 (長者友善大掣) -->
     <button class="card" id="voiceHelpBtn"
       onmousedown="startVoiceHelp()" onmouseup="stopVoiceHelp()" onmouseleave="stopVoiceHelp()"
-      ontouchstart="startVoiceHelp();event.preventDefault()" ontouchend="stopVoiceHelp()"
-      style="cursor:pointer;text-align:center;padding:16px;background:linear-gradient(135deg,#ff6b35,#e74c3c);border:none;user-select:none;-webkit-user-select:none;">
+      ontouchstart="startVoiceHelp()" ontouchend="stopVoiceHelp()" ontouchcancel="stopVoiceHelp()"
+      style="cursor:pointer;text-align:center;padding:16px;background:linear-gradient(135deg,#ff6b35,#e74c3c);border:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;">
       <div style="font-size:32px;margin-bottom:4px;">🎤</div>
       <div style="font-weight:700;font-size:15px;">語音求助 · 㩒住講</div>
       <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px;" id="voiceHelpHint">輕觸開始 → 講低你需要咩幫助</div>
@@ -874,10 +874,27 @@
   }
 
   // 🎤 語音一鍵求助（㩒住講 · 放手傳送）
+  let voiceTimeout = null;
+
   function startVoiceHelp() {
-    if (isRecording) return;
+    const hint = document.getElementById('voiceHelpHint');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { showToast('瀏覽器不支援語音輸入', 'error'); return; }
+
+    // Always show visual feedback
+    const btn = document.getElementById('voiceHelpBtn');
+    if (btn) { btn.style.background = 'linear-gradient(135deg,#e74c3c,#ff0000)'; }
+
+    // Fallback: browser doesn't support speech → open chat directly
+    if (!SpeechRecognition) {
+      if (hint) hint.innerText = '📝 請打字輸入求助內容';
+      stopRecordingUI();
+      openAiChat();
+      return;
+    }
+
+    if (isRecording) return;
+    isRecording = true;
+    if (hint) hint.innerText = '🎙️ 正在聆聽... 講完放手';
 
     lastRecognizedText = null;
     speechRecognitionInstance = new SpeechRecognition();
@@ -885,18 +902,13 @@
     speechRecognitionInstance.continuous = false;
     speechRecognitionInstance.interimResults = false;
 
-    const btn = document.getElementById('voiceHelpBtn');
-    const hint = document.getElementById('voiceHelpHint');
-    if (btn) { btn.style.background = 'linear-gradient(135deg,#e74c3c,#ff0000)'; isRecording = true; }
-    if (hint) hint.innerText = '🎙️ 正在聆聽... 講完放手';
-
     speechRecognitionInstance.onresult = (e) => {
       const text = e.results[0][0].transcript;
       stopRecordingUI();
       document.getElementById('aiChatInput').value = text;
       sendAiMessage();
       openAiChat();
-      if (hint) hint.innerText = '✅ 已發送！輕觸再試';
+      if (hint) hint.innerText = '✅ 已發送！';
     };
 
     speechRecognitionInstance.onnomatch = () => {
@@ -904,21 +916,34 @@
       if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
     };
 
-    speechRecognitionInstance.onerror = (e) => {
+    speechRecognitionInstance.onerror = () => {
       stopRecordingUI();
-      if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
+      if (hint) hint.innerText = '❌ 收音失敗，㩒住再試';
     };
 
-    speechRecognitionInstance.onend = () => {
-      stopRecordingUI();
-    };
+    speechRecognitionInstance.onend = () => { stopRecordingUI(); };
 
-    speechRecognitionInstance.start();
+    try {
+      speechRecognitionInstance.start();
+      // Safety timeout: auto-stop after 12 seconds
+      clearTimeout(voiceTimeout);
+      voiceTimeout = setTimeout(() => {
+        if (isRecording && speechRecognitionInstance) {
+          speechRecognitionInstance.stop();
+        }
+      }, 12000);
+    } catch(e) {
+      stopRecordingUI();
+      if (hint) hint.innerText = '❌ 啟動失敗，請打字輸入';
+      openAiChat();
+    }
   }
 
   function stopVoiceHelp() {
-    if (!isRecording || !speechRecognitionInstance) return;
-    speechRecognitionInstance.stop();
+    clearTimeout(voiceTimeout);
+    if (isRecording && speechRecognitionInstance) {
+      try { speechRecognitionInstance.stop(); } catch(e) {}
+    }
   }
 
   function toggleAiVoiceInput() {
