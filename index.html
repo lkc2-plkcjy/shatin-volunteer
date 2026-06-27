@@ -320,7 +320,10 @@
     <div id="kycAwaitingAlert" class="status-alert" style="display:none;"><span>⚠️</span><div><strong>等待 NGO 認證中</strong><p style="font-size:12px; margin-top:2px;">為確保社區長者安全，您的義工身份正在進行 KYC 審核。核准後方可接單。</p></div></div>
     
     <!-- 🎤 語音一鍵求助 (長者友善大掣) -->
-    <button class="card" id="voiceHelpBtn" onclick="startVoiceHelp()" style="cursor:pointer;text-align:center;padding:16px;background:linear-gradient(135deg,#ff6b35,#e74c3c);border:none;">
+    <button class="card" id="voiceHelpBtn"
+      onmousedown="startVoiceHelp()" onmouseup="stopVoiceHelp()" onmouseleave="stopVoiceHelp()"
+      ontouchstart="startVoiceHelp();event.preventDefault()" ontouchend="stopVoiceHelp()"
+      style="cursor:pointer;text-align:center;padding:16px;background:linear-gradient(135deg,#ff6b35,#e74c3c);border:none;user-select:none;-webkit-user-select:none;">
       <div style="font-size:32px;margin-bottom:4px;">🎤</div>
       <div style="font-weight:700;font-size:15px;">語音求助 · 㩒住講</div>
       <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px;" id="voiceHelpHint">輕觸開始 → 講低你需要咩幫助</div>
@@ -821,6 +824,7 @@
   let liveMapInstance = null;
   let speechRecognitionInstance = null;
   let isRecording = false;
+  let lastRecognizedText = null;
   let chatHistory = [];
   const POSTS_PER_PAGE = 5;
   let forumPage = {};
@@ -869,14 +873,13 @@
     if (vh) vh.style.background = 'linear-gradient(135deg,#ff6b35,#e74c3c)';
   }
 
-  // 🎤 語音一鍵求助（長者版）
+  // 🎤 語音一鍵求助（㩒住講 · 放手傳送）
   function startVoiceHelp() {
+    if (isRecording) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { showToast('瀏覽器不支援語音輸入', 'error'); return; }
-    if (isRecording) {
-      speechRecognitionInstance.stop();
-      return;
-    }
+
+    lastRecognizedText = null;
     speechRecognitionInstance = new SpeechRecognition();
     speechRecognitionInstance.lang = 'zh-HK';
     speechRecognitionInstance.continuous = false;
@@ -888,22 +891,33 @@
     if (hint) hint.innerText = '🎙️ 正在聆聽... 講完放手';
 
     speechRecognitionInstance.onresult = (e) => {
-      const text = e.results[0][0].transcript;
-      if (hint) hint.innerText = `✅ 已辨識：「${text}」`;
-      stopRecordingUI();
-      // 自動經 AI chat 流程發送（會觸發關鍵字偵測→發布求助）
-      document.getElementById('aiChatInput').value = text;
-      sendAiMessage();
-      openAiChat();
+      lastRecognizedText = e.results[0][0].transcript;
+      if (hint) hint.innerText = '✅ 已辨識，放手即傳送！';
     };
 
     speechRecognitionInstance.onerror = () => {
       stopRecordingUI();
-      if (hint) hint.innerText = '❌ 聽唔到，㩒多次再試';
+      lastRecognizedText = null;
+      if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
     };
 
-    speechRecognitionInstance.onend = () => { stopRecordingUI(); };
+    speechRecognitionInstance.onend = () => {
+      stopRecordingUI();
+      if (lastRecognizedText) {
+        document.getElementById('aiChatInput').value = lastRecognizedText;
+        sendAiMessage();
+        openAiChat();
+        if (hint) hint.innerText = '✅ 已發送！輕觸再試';
+        lastRecognizedText = null;
+      }
+    };
+
     speechRecognitionInstance.start();
+  }
+
+  function stopVoiceHelp() {
+    if (!isRecording || !speechRecognitionInstance) return;
+    speechRecognitionInstance.stop();
   }
 
   function toggleAiVoiceInput() {
