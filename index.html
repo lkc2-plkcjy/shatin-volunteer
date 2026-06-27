@@ -430,8 +430,9 @@
       <div id="newTaskForm" style="display:none;" class="card">
         <h4>新增社區預約任務</h4>
         <input class="input-field" type="text" placeholder="任務名稱" id="newTaskTitle">
-        <input class="input-field" type="text" placeholder="日期 (YYYY-MM-DD)" id="newTaskDate" value="2026-06-20">
-        <input class="input-field" type="text" placeholder="時間段" id="newTaskTime" value="14:00-16:00">
+        <input class="input-field" type="date" id="newTaskDate" value="2026-06-20">
+        <input class="input-field" type="time" id="newTaskTime" value="14:00">
+        <input class="input-field" type="time" id="newTaskEndTime" value="16:00">
         <input class="input-field" type="number" placeholder="招募人數" id="newTaskQuota" value="3">
         <input class="input-field" type="text" placeholder="地點" id="newTaskLocation" value="沙田禾輋邨">
         <button class="btn" onclick="addNgoTask()">發布並同步至大廳</button>
@@ -442,9 +443,31 @@
         <input class="input-field" type="text" placeholder="求助內容" id="liveReqTitle">
         <select class="input-field" id="liveReqLocation">
           <option value="22.382,114.189">沙田市中心</option>
+          <option value="22.382,114.193">瀝源邨</option>
+          <option value="22.382,114.189">禾輋邨</option>
           <option value="22.373,114.195">沙田圍</option>
+          <option value="22.376,114.190">博康</option>
+          <option value="22.379,114.185">車公廟</option>
+          <option value="22.379,114.185">秦石</option>
+          <option value="22.365,114.181">新田圍</option>
+          <option value="22.387,114.203">第一城</option>
+          <option value="22.388,114.209">石門</option>
           <option value="22.399,114.191">火炭</option>
+          <option value="22.370,114.176">美林</option>
+          <option value="22.376,114.178">大圍</option>
+          <option value="22.365,114.173">顯徑</option>
           <option value="22.425,114.228">馬鞍山</option>
+          <option value="22.414,114.224">大水坑</option>
+          <option value="22.415,114.222">恆安</option>
+          <option value="22.432,114.240">烏溪沙</option>
+          <option value="22.382,114.188">新城市廣場</option>
+          <option value="22.381,114.189">沙田公園</option>
+          <option value="22.381,114.187">沙田大會堂</option>
+          <option value="22.380,114.187">沙田圖書館</option>
+          <option value="22.383,114.175">沙田醫院</option>
+          <option value="22.378,114.193">威爾斯親王醫院</option>
+          <option value="22.370,114.015">沙田頭</option>
+          <option value="22.382,114.189">沙田</option>
         </select>
         <button class="btn" onclick="publishLiveRequest()">模擬廣播即時單</button>
         <button class="btn-outline btn" onclick="document.getElementById('liveRequestForm').style.display='none'">取消</button>
@@ -1098,7 +1121,7 @@
             </div>
             ${volMsg ? `<div style="margin-top:6px;font-size:13px;">${volMsg}</div>` : ''}
             <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">
-              🟡 等待義工接單中 · 接單後會即時通知你
+              🟡 已發布 ${timeSince(req.id)} · 義工接單後會即時通知你
             </div>
           </div>`;
       }).join('');
@@ -1116,13 +1139,26 @@
     if (!isOnline) return;
     const pendings = liveRequests.filter(r => r.status === 'pending' && r.requesterUserId !== currentUser?.userId);
     if (!pendings.length) return;
-    container.innerHTML += '<div style=\"font-weight:700; color:#fff; margin:12px 0 8px 0;\">🔔 附近街坊求助</div>' + pendings.map(req => `
-      <div class="card" style="background:#3d2222; border-color:#e74c3c; margin-bottom:10px;">
-        <div class="flex-row" style="justify-content:space-between;"><span class="badge" style="background:#7f2727;\">即時呼求</span><span style="color:var(--accent-red);\">🚨 剛剛發起</span></div>
-        <strong>${req.title}</strong><p style="font-size:12px;\">📍 ${req.locationName}</p>
-        <div style="display:flex; justify-content:flex-end; margin-top:8px;\"><button class="btn btn-small btn-red\" data-action=\"accept\" data-id=\"${req.id}\">🚀 即刻出發幫手</button></div>
-      </div>
-    `).join('');
+    container.innerHTML += '<div style="font-weight:700; color:#fff; margin:12px 0 8px 0;">🔔 附近街坊求助</div>' + pendings.map(req => {
+      const ageMin = Math.floor((Date.now() - req.id) / 60000);
+      const ageStr = timeSince(req.id);
+      let bg, border, badgeBg, textColor, icon, label, btnColor;
+      if (ageMin < 5) {
+        bg = '#3d3322'; border = '#f1c40f'; badgeBg = '#5a4a1a'; textColor = '#f1c40f';
+        icon = '🟡'; label = '剛剛發起'; btnColor = '#a08000';
+      } else if (ageMin < 15) {
+        bg = '#3d2e1a'; border = '#ff6b35'; badgeBg = '#6b3a1a'; textColor = '#ff6b35';
+        icon = '🟠'; label = '等待中'; btnColor = '#ff6b35';
+      } else {
+        bg = '#3d2222'; border = '#e74c3c'; badgeBg = '#7f2727'; textColor = '#e74c3c';
+        icon = '🔴'; label = '緊急'; btnColor = '#e74c3c';
+      }
+      return '<div class="card" style="background:'+bg+'; border-color:'+border+'; margin-bottom:10px;">'
+        +'<div class="flex-row" style="justify-content:space-between;"><span class="badge" style="background:'+badgeBg+';">即時呼求</span><span style="color:'+textColor+'; font-weight:600;">'+icon+' '+label+' · '+ageStr+'</span></div>'
+        +'<strong>'+req.title+'</strong><p style="font-size:12px;">📍 '+req.locationName+'</p>'
+        +'<div style="display:flex; justify-content:flex-end; margin-top:8px;"><button class="btn btn-small" style="background:'+btnColor+'; border:none; color:white;" data-action="accept" data-id="'+req.id+'">🚀 即刻出發幫手</button></div>'
+        +'</div>';
+    }).join('');
   }
 
   function openTaskDetail(id) {
@@ -1753,10 +1789,12 @@
     const title = document.getElementById('newTaskTitle').value.trim();
     const date = document.getElementById('newTaskDate').value;
     const time = document.getElementById('newTaskTime').value;
+    const endTime = document.getElementById('newTaskEndTime').value;
+    const timeRange = endTime ? time + '-' + endTime : time;
     const quota = parseInt(document.getElementById('newTaskQuota').value) || 2;
     const loc = document.getElementById('newTaskLocation').value.trim();
     if (!title) return showToast("請輸入任務名稱", 'error');
-    tasks.push({ id: Date.now(), ngo: '沙田長者鄰舍中心', title, date, time, location: loc, quota, enrolled: [], completed: [], icon: '📌', description: '', signIns: {} });
+    tasks.push({ id: Date.now(), ngo: '沙田長者鄰舍中心', title, date, time: timeRange, location: loc, quota, enrolled: [], completed: [], icon: '📌', description: '', signIns: {} });
     saveToStorage('tasks', tasks);
     document.getElementById('newTaskForm').style.display = 'none';
     renderNgoTasks();
