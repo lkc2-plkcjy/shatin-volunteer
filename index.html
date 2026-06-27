@@ -891,26 +891,26 @@
     if (hint) hint.innerText = '🎙️ 正在聆聽... 講完放手';
 
     speechRecognitionInstance.onresult = (e) => {
-      lastRecognizedText = e.results[0][0].transcript;
-      if (hint) hint.innerText = '✅ 已辨識，放手即傳送！';
+      const text = e.results[0][0].transcript;
+      stopRecordingUI();
+      document.getElementById('aiChatInput').value = text;
+      sendAiMessage();
+      openAiChat();
+      if (hint) hint.innerText = '✅ 已發送！輕觸再試';
     };
 
-    speechRecognitionInstance.onerror = () => {
+    speechRecognitionInstance.onnomatch = () => {
       stopRecordingUI();
-      if (!lastRecognizedText && hint) hint.innerText = '❌ 聽唔到，㩒住再試';
+      if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
+    };
+
+    speechRecognitionInstance.onerror = (e) => {
+      stopRecordingUI();
+      if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
     };
 
     speechRecognitionInstance.onend = () => {
       stopRecordingUI();
-      if (lastRecognizedText) {
-        document.getElementById('aiChatInput').value = lastRecognizedText;
-        sendAiMessage();
-        openAiChat();
-        if (hint) hint.innerText = '✅ 已發送！輕觸再試';
-        lastRecognizedText = null;
-      } else {
-        if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
-      }
     };
 
     speechRecognitionInstance.start();
