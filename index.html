@@ -897,8 +897,7 @@
 
     speechRecognitionInstance.onerror = () => {
       stopRecordingUI();
-      lastRecognizedText = null;
-      if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
+      if (!lastRecognizedText && hint) hint.innerText = '❌ 聽唔到，㩒住再試';
     };
 
     speechRecognitionInstance.onend = () => {
@@ -909,6 +908,8 @@
         openAiChat();
         if (hint) hint.innerText = '✅ 已發送！輕觸再試';
         lastRecognizedText = null;
+      } else {
+        if (hint) hint.innerText = '❌ 聽唔到，㩒住再試';
       }
     };
 
